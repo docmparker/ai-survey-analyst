@@ -1,0 +1,16 @@
+/data/
+/notebooks/
+/reports/
+.env
+
+.DS_Store
+__pycache__/
+
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+
+.ipynb_checkpoints
+profile_default/
+ipython_config.py

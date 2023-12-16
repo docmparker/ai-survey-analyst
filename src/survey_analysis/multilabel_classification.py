@@ -4,40 +4,24 @@ from pydantic.main import create_model
 from instructor.function_calls import OpenAISchema
 import yaml
 from .single_comment_task import SurveyTaskProtocol
+from typing import Type
 
 # load the tags as a list of dicts, each with a 'topic' and 'description'
 # in the yaml, these are all under the root of 'tags'
-# tags_predefined = yaml.safe_load(open('../data/tags_8.yaml', 'r'))['tags']
-
+# It is loaded here for the default set of tags we developed for course feedback
 with open('../data/tags_8.yaml', 'r') as file:
     data = yaml.safe_load(file)
 
-tags_list = data['tags']
-
-# Model classes
-class CategoryValue(Enum):
-    ZERO = 0
-    ONE = 1
-
-# assume all categories are 0 if there is no content in the comment (an alternative would be to set 'other' to 1 if there is such
-# a category and there is no content in the comment). Defaults are set to CategoryValue.ZERO.
-tag_fields = {'_'.join(tag['topic'].split()): (CategoryValue, CategoryValue.ZERO) for tag in tags_list}
-CategoriesModel = create_model('Categories', **tag_fields, __base__=OpenAISchema)
-
-# I am deciding to only include the descriptions of the categories spelled out in the system message to the 
-# model but not to repeate those in the field descriptions for the schema.
-
-# Create the model
-class MultilabelClassificationResult(OpenAISchema):
-    """Store the multilabel classification and reasoning of a comment"""
-    reasoning: str = Field("The comment had no content", description="The reasoning for the classification")
-    categories: CategoriesModel = Field(CategoriesModel(), description="The categories that the comment belongs to")
+default_tags_list: list[dict[str, str]] = data['tags']
 
 
 class MultiLabelClassification(SurveyTaskProtocol):
     """Class for multilabel classification"""
     def __init__(self, tags_list: list[dict[str, str]]):
+        """Initialize the multilabel classification task with a list of tags, 
+        each a dict with a 'topic' and 'description' key"""
         self.tags_list = tags_list
+        self._result_class = None
 
     def prompt_messages(self, comment: str) -> list[dict[str, str]]:
         """Creates the messages for the multilabel classification prompt
@@ -76,7 +60,28 @@ behind every assigned category in the output."""
         return messages
 
     @property
-    def result_class(self) -> MultilabelClassificationResult:
-        """Returns the result class for multilabel classification"""
-        return MultilabelClassificationResult
+    def result_class(self) -> Type[OpenAISchema]:
+        """Returns the result class for multilabel classification, dynamically creating it if necessary"""
+
+        if not self._result_class:
+            # only need to dynamically create the model once
+            class CategoryValue(Enum):
+                ZERO = 0
+                ONE = 1
+
+            tag_fields = {'_'.join(tag['topic'].split()): (CategoryValue, CategoryValue.ZERO) for tag in self.tags_list}
+            CategoriesModel = create_model('Categories', **tag_fields, __base__=OpenAISchema)
+
+            # I am deciding to only include the descriptions of the categories spelled out in the system message to the 
+            # model but not to repeat those in the field descriptions for the schema.
+
+            # Create the model
+            class MultilabelClassificationResult(OpenAISchema):
+                """Store the multilabel classification and reasoning of a comment"""
+                reasoning: str = Field("The comment had no content", description="The reasoning for the classification")
+                categories: CategoriesModel = Field(CategoriesModel(), description="The categories that the comment belongs to")
+
+            self._result_class = MultilabelClassificationResult
+
+        return self._result_class
     

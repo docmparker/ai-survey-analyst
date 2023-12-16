@@ -5,7 +5,7 @@ from openai import AsyncOpenAI
 import httpx
 from .utils import comment_has_content
 from abc import abstractmethod
-from typing import Any, Protocol
+from typing import Any, Protocol, Type
 
 aclient = AsyncOpenAI(timeout=httpx.Timeout(timeout=60.0))
 
@@ -50,7 +50,7 @@ async def apply_task(comment: str, get_prompt: GetPrompt, result_class: OpenAISc
 
     return result
 
-
+# TODO: specialize this to acknowledge that it is for tasks that expect a single comment
 class SurveyTaskProtocol(Protocol):
     """Abstract class for a survey task"""
     @abstractmethod
@@ -59,7 +59,7 @@ class SurveyTaskProtocol(Protocol):
         pass
 
     @abstractmethod
-    def result_class(self) -> OpenAISchema:
+    def result_class(self) -> Type[OpenAISchema]:
         """Returns the result class for the task.
         The models for task results should have defaults to account for comment with no content. 
         The individual task processing routine uses the default if a comment has no content so 

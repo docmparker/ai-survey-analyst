@@ -1,9 +1,11 @@
 from instructor.function_calls import OpenAISchema
 from .single_comment_task import SurveyTaskProtocol
 from pydantic import Field
+from typing import Type
 
 
-# Create the model
+# Create the model - here we do it outside the class so it can also be used elsewhere if desired
+# without instantiating the class
 class ExcerptExtractionResult(OpenAISchema):
     """Store excerpts containing a particular goal focus extracted from a student comment"""
     excerpts: list[str] = Field([], description="A list of excerpts related to the goal focus")
@@ -51,7 +53,7 @@ into a single excerpt."""
         return messages
 
     @property
-    def result_class(self) -> ExcerptExtractionResult:
+    def result_class(self) -> Type[OpenAISchema]:
         """Returns the result class for multilabel classification"""
         return ExcerptExtractionResult
     

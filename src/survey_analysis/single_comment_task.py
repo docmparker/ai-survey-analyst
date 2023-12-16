@@ -1,10 +1,11 @@
 from typing import Callable
 from instructor.function_calls import OpenAISchema, Mode
+from pydantic import BaseModel
 from dataclasses import dataclass
 from openai import AsyncOpenAI
 import httpx
-from .utils import comment_has_content
-from abc import abstractmethod
+# from .utils import comment_has_content
+from abc import ABC, abstractmethod
 from typing import Any, Protocol, Type
 
 aclient = AsyncOpenAI(timeout=httpx.Timeout(timeout=60.0))
@@ -16,25 +17,36 @@ class LLMConfig:
     temperature: float = 0.0
 
 
-# takes a string comment and returns the messages for the prompt
-GetPrompt = Callable[[str], list[dict[str, str]]]
+class InputModel(ABC):
+    """Abstract base class for input models
+    The input model has to be able to tell when it is empty so we don't need to run it through the LLM 
+    in that case.
+    """
+    @abstractmethod
+    def is_empty(self) -> bool:
+        """Returns True if the input is empty"""
+        pass
 
-# signature for running tasks that take a string comment and return an OpenAISchema
-ApplyTask = Callable[[str, GetPrompt, OpenAISchema, LLMConfig | None], OpenAISchema] 
+
+# takes a task object and returns the messages for the prompt
+GetPrompt = Callable[[BaseModel], list[dict[str, str]]]
+
+# signature for running tasks that take a task object and return an OpenAISchema
+ApplyTask = Callable[[BaseModel, GetPrompt, OpenAISchema, LLMConfig | None], OpenAISchema] 
 
 
-async def apply_task(comment: str, get_prompt: GetPrompt, result_class: OpenAISchema, llm_config: LLMConfig=None) -> OpenAISchema:
-    """Gets the result of applying an NLP task to a comment"""
+async def apply_task(task_input: InputModel, get_prompt: GetPrompt, result_class: OpenAISchema, llm_config: LLMConfig=None) -> OpenAISchema:
+    """Gets the result of applying an NLP task to a comment, list of comments, or some other unit or work."""
     if llm_config is None:
         llm_config = LLMConfig()
 
-    # if the comment has no content (is a None equivalent), return early with
+    # if the task_input has no content (is a None equivalent), return early with
     # an empty classification (filled in with defaults)
-    if not comment_has_content(comment):
+    if task_input.is_empty():   # not comment_has_content(comment):
         return result_class()
     
     # expect partial application of get_prompt if needs something like the tags_list
-    messages = get_prompt(comment)
+    messages = get_prompt(task_input)
     fn_schema = result_class.openai_schema
 
     response = await aclient.chat.completions.create(
@@ -50,11 +62,16 @@ async def apply_task(comment: str, get_prompt: GetPrompt, result_class: OpenAISc
 
     return result
 
-# TODO: specialize this to acknowledge that it is for tasks that expect a single comment
 class SurveyTaskProtocol(Protocol):
     """Abstract class for a survey task"""
+
     @abstractmethod
-    def prompt_messages(self, comment: str) -> list[dict[str, str]]:
+    def input_class(self) -> Type[InputModel]:
+        """Returns the input class for the task"""
+        pass
+
+    @abstractmethod
+    def prompt_messages(self, task_input: InputModel) -> list[dict[str, str]]:
         """Creates the messages for the prompt"""
         pass
 

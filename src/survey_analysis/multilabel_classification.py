@@ -1,10 +1,11 @@
 from enum import Enum
-from pydantic import Field
+from pydantic import Field, BaseModel
 from pydantic.main import create_model
 from instructor.function_calls import OpenAISchema
 import yaml
-from .single_comment_task import SurveyTaskProtocol
+from .single_comment_task import SurveyTaskProtocol, InputModel
 from typing import Type
+from .utils import comment_has_content
 
 # load the tags as a list of dicts, each with a 'topic' and 'description'
 # in the yaml, these are all under the root of 'tags'
@@ -14,6 +15,14 @@ with open('../data/tags_8.yaml', 'r') as file:
 
 default_tags_list: list[dict[str, str]] = data['tags']
 
+class CommentModel(InputModel, BaseModel):
+    """Wraps a single comment for multilabel classification"""
+    comment: str | None = Field(None, description="The comment to be classified")
+
+    def is_empty(self) -> bool:
+        """Returns True if the input is empty"""
+        return not comment_has_content(self.comment)
+
 
 class MultiLabelClassification(SurveyTaskProtocol):
     """Class for multilabel classification"""
@@ -22,11 +31,15 @@ class MultiLabelClassification(SurveyTaskProtocol):
         each a dict with a 'topic' and 'description' key"""
         self.tags_list = tags_list
         self._result_class = None
+        self._tags_for_prompt = None
 
-    def prompt_messages(self, comment: str) -> list[dict[str, str]]:
-        """Creates the messages for the multilabel classification prompt
-
-        tags_for_prompt is a list of tags that will be used in the prompt, each
+    @property
+    def input_class(self) -> Type[InputModel]:
+        return CommentModel
+    
+    @property
+    def tags_for_prompt(self) -> str:
+        """tags_for_prompt is a list of tags that will be used in the prompt, each
         a dict with a 'topic' and 'description' key.
         """
 
@@ -37,8 +50,16 @@ class MultiLabelClassification(SurveyTaskProtocol):
         def format_tag(tag: dict):
             """Format a tag for use in the prompt"""
             return f"Topic: {format_topic_name(tag['topic'])}\nDescription: {tag['description']}"
-        
-        tags_for_prompt = '\n\n'.join([format_tag(tag) for tag in self.tags_list])
+
+        if not self._tags_for_prompt: 
+            tags_for_prompt = '\n\n'.join([format_tag(tag) for tag in self.tags_list])
+            self._tags_for_prompt = tags_for_prompt
+
+        return self._tags_for_prompt
+
+
+    def prompt_messages(self, task_input:CommentModel) -> list[dict[str, str]]:
+        """Creates the messages for the multilabel classification prompt"""
 
         system_message = f"""You are an assistant that classifies student course \
 feedback comments.  You respond only with a JSON object.
@@ -46,12 +67,12 @@ feedback comments.  You respond only with a JSON object.
 You will be provided with a comment from a student course feedback survey. \
 Categorize the comment with as many of the following categories as apply:
 
-{tags_for_prompt}
+{self._tags_for_prompt}
 
 Think step-by-step to arrive at a correct classification. Include your reasoning \
 behind every assigned category in the output."""
 
-        user_message = f"""{comment}"""
+        user_message = f"""{task_input.comment}"""
 
         messages =  [  
         {'role':'system', 'content': system_message},

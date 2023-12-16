@@ -2,29 +2,31 @@ from instructor.function_calls import OpenAISchema, Mode
 from typing import Callable
 import time
 import asyncio
+from .single_input_task import InputModel
 
-RunTask = Callable[[str], OpenAISchema]
+RunTask = Callable[[InputModel], OpenAISchema]
 
-async def process_tasks(comments: list[str],
+# TODO: generalize this to take a list of task inputs 
+async def process_tasks(task_inputs: list[InputModel],
                                       run_task: RunTask,
                                       batch_size: int=100, 
                                       batch_sleep_interval: int=30) -> list[OpenAISchema]:
-    """Takes a list of comments and processes them in parallel, returning a list of 
+    """Takes a list of inputs and processes them in parallel, returning a list of 
     pydantic model responses. This is done in batches, with the batches having their 
     model calls processed in parallel.
     """
 
-    print(f"processing {len(comments)} comments in batches of {batch_size}")
+    print(f"processing {len(task_inputs)} inputs in batches of {batch_size}")
     print(f"sleeping for {batch_sleep_interval} seconds between batches")
     response_list: list[OpenAISchema] = []
-    for i in range(0, len(comments), batch_size):
-        comment_batch = comments[i:i+batch_size]
+    for i in range(0, len(task_inputs), batch_size):
+        input_batch = task_inputs[i:i+batch_size]
 
         print(f"starting {i} to {i+batch_size}")
         start_time = time.time()
 
-        # responses = [1]*len(comment_batch)
-        responses = await asyncio.gather(*[run_task(comment) for comment in comment_batch])
+        # responses = [1]*len(input_batch)
+        responses = await asyncio.gather(*[run_task(input) for input in input_batch])
         response_list.extend(responses)
         print(f"completed {i} to {i+batch_size}")
         # logging.info(f"completed {i} to {i+batch_size}")
@@ -33,7 +35,7 @@ async def process_tasks(comments: list[str],
         elapsed_time = end_time - start_time
         print(f"elapsed time: {elapsed_time}")
 
-        if i < len(comments) - batch_size:
+        if i < len(task_inputs) - batch_size:
             time_to_next_minute = batch_sleep_interval - (elapsed_time % batch_sleep_interval)
             print(f"sleeping for {time_to_next_minute} seconds")
             time.sleep(time_to_next_minute)

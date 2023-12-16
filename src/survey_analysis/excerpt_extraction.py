@@ -1,6 +1,7 @@
 from instructor.function_calls import OpenAISchema
-from .single_comment_task import SurveyTaskProtocol
-from pydantic import Field
+from .utils import comment_has_content
+from .single_comment_task import InputModel, SurveyTaskProtocol
+from pydantic import BaseModel, Field
 from typing import Type
 
 
@@ -11,13 +12,26 @@ class ExcerptExtractionResult(OpenAISchema):
     excerpts: list[str] = Field([], description="A list of excerpts related to the goal focus")
 
 
+class CommentModel(InputModel, BaseModel):
+    """Wraps a single comment for multilabel classification"""
+    comment: str | None = Field(None, description="The comment to be classified")
+
+    def is_empty(self) -> bool:
+        """Returns True if the input is empty"""
+        return not comment_has_content(self.comment)
+
+
 class ExcerptExtraction(SurveyTaskProtocol):
     """Class for excerpt extraction"""
     def __init__(self, goal_focus: str, question: str):
         self.goal_focus = goal_focus
         self.question = question
 
-    def prompt_messages(self, comment: str) -> list[dict[str, str]]:
+    @property
+    def input_class(self) -> Type[InputModel]:
+        return CommentModel
+
+    def prompt_messages(self, task_input: CommentModel) -> list[dict[str, str]]:
         """Creates the messages for the extraction prompt"""
 
         delimiter = "####"
@@ -44,7 +58,7 @@ Before finalizing excerpts, review your excerpts to see if any consecutive excer
 are actually about the same suggestion or part of the same thought. If so, combine them \
 into a single excerpt."""
 
-        user_message = f"""{delimiter}{comment}{delimiter}"""
+        user_message = f"""{delimiter}{task_input.comment}{delimiter}"""
 
         messages =  [  
         {'role':'system', 'content': system_message},

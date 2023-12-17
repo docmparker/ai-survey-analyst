@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, ConfigDict
 from pydantic.main import create_model
 from instructor.function_calls import OpenAISchema
 import yaml
@@ -82,8 +82,15 @@ behind every assigned category in the output."""
                 ZERO = 0
                 ONE = 1
 
+            aliases = {'_'.join(tag['topic'].split()): tag['topic'] for tag in self.tags_list}
+            def tag_alias_generator(name: str) -> str:
+                """Generate aliases based on what was passed with the tags"""
+                return aliases[name]
+
             tag_fields = {'_'.join(tag['topic'].split()): (CategoryValue, CategoryValue.ZERO) for tag in self.tags_list}
-            CategoriesModel = create_model('Categories', **tag_fields, __base__=OpenAISchema)
+            # CategoriesModel = create_model('Categories', **tag_fields, __base__=OpenAISchema)
+            # note that the openaischema uses the aliases to create the json schema for the model
+            CategoriesModel = create_model('Categories', **tag_fields, __config__=ConfigDict(alias_generator=tag_alias_generator, __base__=OpenAISchema))
 
             # I am deciding to only include the descriptions of the categories spelled out in the system message to the 
             # model but not to repeat those in the field descriptions for the schema.

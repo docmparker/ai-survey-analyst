@@ -57,9 +57,6 @@ class CommentBatch(InputModel, BaseModel):
         return all([comment.is_empty() for comment in self.comments])
 
 
-# TODO: give this a different protocol to distinguish it from tasks that take a single comment
-# TODO: make themes in a more robust format than a string since this could be a result class from some 
-# other task
 class DeriveThemes(SurveyTaskProtocol):
     """Class for deriving themes from a batch of comments"""
     def __init__(self, question: str):
@@ -113,6 +110,8 @@ less than 3 quotes, then include as many as you can."""
         return DerivedThemes
 
 
+# needs an input class that is a list of DerivedThemes
+    
 class CombineThemes(SurveyTaskProtocol):
     """Class for combining themes into fewer common themes"""
     def __init__(self, goal_focus: str, question: str):
@@ -122,9 +121,9 @@ class CombineThemes(SurveyTaskProtocol):
 
     @property
     def input_class(self) -> Type[InputModel]:
-        return CommentModel
+        return CommentModel # change this to a list of DerivedThemes
 
-    def prompt_messages(self, themes: str, survey_question: str) -> list[dict[str, str]]:
+    def prompt_messages(self, themes: list[DerivedThemes], survey_question: str) -> list[dict[str, str]]:
         """Creates the messages for the theming prompt
         Expects themes to be of form:
         ('Themes:\n'

@@ -3,7 +3,7 @@ from pydantic import Field, BaseModel
 from pydantic.main import create_model
 from instructor.function_calls import OpenAISchema
 import yaml
-from .single_comment_task import SurveyTaskProtocol, InputModel
+from .single_input_task import SurveyTaskProtocol, InputModel, CommentModel
 from typing import Type
 from .utils import comment_has_content
 
@@ -14,14 +14,6 @@ with open('../data/tags_8.yaml', 'r') as file:
     data = yaml.safe_load(file)
 
 default_tags_list: list[dict[str, str]] = data['tags']
-
-class CommentModel(InputModel, BaseModel):
-    """Wraps a single comment for multilabel classification"""
-    comment: str | None = Field(None, description="The comment to be classified")
-
-    def is_empty(self) -> bool:
-        """Returns True if the input is empty"""
-        return not comment_has_content(self.comment)
 
 
 class MultiLabelClassification(SurveyTaskProtocol):

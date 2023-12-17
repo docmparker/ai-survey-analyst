@@ -1,6 +1,6 @@
 from instructor.function_calls import OpenAISchema
 from .utils import comment_has_content
-from .single_comment_task import InputModel, SurveyTaskProtocol
+from .single_input_task import InputModel, SurveyTaskProtocol, CommentModel
 from pydantic import BaseModel, Field
 from typing import Type
 
@@ -10,15 +10,6 @@ from typing import Type
 class ExcerptExtractionResult(OpenAISchema):
     """Store excerpts containing a particular goal focus extracted from a student comment"""
     excerpts: list[str] = Field([], description="A list of excerpts related to the goal focus")
-
-
-class CommentModel(InputModel, BaseModel):
-    """Wraps a single comment for multilabel classification"""
-    comment: str | None = Field(None, description="The comment to be classified")
-
-    def is_empty(self) -> bool:
-        """Returns True if the input is empty"""
-        return not comment_has_content(self.comment)
 
 
 class ExcerptExtraction(SurveyTaskProtocol):

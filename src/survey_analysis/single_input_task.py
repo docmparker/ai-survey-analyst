@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from dataclasses import dataclass
 from openai import AsyncOpenAI
 import httpx
-# from .utils import comment_has_content
+from .utils import comment_has_content
 from abc import ABC, abstractmethod
 from typing import Any, Protocol, Type
 
@@ -26,6 +26,14 @@ class InputModel(ABC):
     def is_empty(self) -> bool:
         """Returns True if the input is empty"""
         pass
+
+class CommentModel(InputModel, BaseModel):
+    """Wraps a single comment. Used by tasks that take a single comment or a list of comments."""
+    comment: str | None = None
+
+    def is_empty(self) -> bool:
+        """Returns True if the input is empty"""
+        return not comment_has_content(self.comment)
 
 
 # takes a task object and returns the messages for the prompt

@@ -8,7 +8,7 @@ from .utils import comment_has_content
 from abc import ABC, abstractmethod
 from typing import Any, Protocol, Type
 
-aclient = AsyncOpenAI(timeout=httpx.Timeout(timeout=60.0))
+aclient = AsyncOpenAI(timeout=httpx.Timeout(timeout=120.0))
 
 @dataclass
 class LLMConfig:

@@ -43,8 +43,8 @@ class CommentBatch(InputModel, BaseModel):
 class ThemeConsolidation(OpenAISchema, InputModel):
     """Store the results from the process of combining a list of themes derived from a batch of comments"""
     step1_reasoning: str = Field("", description="The reasoning for combining themes")
-    step2_intermediate_themes: DerivedThemes = Field(DerivedThemes(), description="The intermediate themes after combining similar themes")
-    final_combined_themes: list[Theme] = Field([], description="The final list of all consolidated themes")
+    step2_intermediate_themes: DerivedThemes = Field(..., description="The intermediate themes after combining similar themes")
+    final_combined_themes: list[Theme] = Field(..., description="The final list of all consolidated themes")
 
     def is_empty(self) -> bool:
         """Returns True if all themes are empty"""
@@ -65,9 +65,6 @@ class DeriveThemes(SurveyTaskProtocol):
 
         delimiter = "####"
 
-        # If you find two or more \
-        # comments that express a common idea, then combine them into a single theme. 
-
         system_message = f"""You are an assistant that derives themes from student course \
 feedback comments.  You respond only with a JSON array.
 
@@ -80,9 +77,9 @@ present in the comments. Examples of themes are: "Helpful Videos", "Clinical App
 and "Interactive Content".
 
 Once you have derived the themes, respond with a JSON array of theme objects. \
-Each theme object should have a 'theme_description' field which describes the \
-theme in two sentences or less, a 'theme_title' field (which \
-gives a short name for the theme in 5 words or less), and a 'citations' \
+Each theme object should have a 'title' field (which \
+gives a short name for the theme in 5 words or less), a 'description' field which describes the \
+theme in two sentences or less, and a 'citations' \
 field, which is an array of 3 exact quotes from distinct survey comments \
 supporting this theme. Each quote should have enough context to be understood. \
 Do not add or alter words in the quotes under any circumstances. If there are \
@@ -170,10 +167,10 @@ class CombineThemes(SurveyTaskProtocol):
                 theme_str += "\n"
             return theme_str
 
-        alt_system_message = f"""You are an assistant who is highly skilled at working with \
+        system_message = f"""You are an assistant who is highly skilled at working with \
 student feedback surveys. Your task is to thoroughly analyze and consolidate a list \
 of themes derived from student feedback on an online course. Each theme consists of a \
-'title', 'description', and a list of 'citations' (exact quotes from students). These \
+'title', 'description', and 'citations' (a list of exact quotes from students). These \
 themes were derived from survey responses to the question: "{self.survey_question}". \
 Your primary focus is on merging themes that cover the same or very similar topics, \
 based on their titles and descriptions.
@@ -197,7 +194,8 @@ Save the output of this step for later output in a JSON object, under the key \
 
 Finally, look for any unique themes from the original list of themes that may have been lost \
 in the consolidation and, if necessary, update the consolidated list of themes to include \
-those. Save the final, consolidated list of themes for later output in a JSON object under the \
+those. If no themes were lost, just repeat the whole list of themes for the output of this step. \
+Save the final, consolidated list of themes for later output in a JSON object under the \
 key 'final_combined_themes' as a list of theme objects, each containing title, description, and citations.
 
 After you have completed all of these steps, present the final overall results in a \
@@ -208,7 +206,7 @@ You will now be presented with the original list of themes."""
         user_message = f"""{format_themes(task_input)}"""
 
         messages =  [  
-            {'role':'system', 'content': alt_system_message},
+            {'role':'system', 'content': system_message},
             {'role':'user', 'content': user_message}
         ]
 

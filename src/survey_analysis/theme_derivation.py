@@ -8,7 +8,8 @@ from typing import Type
 from survey_analysis import single_input_task as sit
 
 
-# Create the model
+# Create the models
+
 class ThematicAnalysisResult(OpenAISchema):
     """Store excerpts containing a particular goal focus extracted from a student comment"""
     excerpts: list[str] = Field([], description="A list of excerpts related to the goal focus")
@@ -106,7 +107,7 @@ less than 3 quotes, then include as many as you can."""
         return DerivedThemes
 
 
-async def derive_themes(task_input: CommentBatch, survey_task: SurveyTaskProtocol, shuffle_passes=3) -> DerivedThemes:
+async def derive_themes(task_input: CommentBatch, survey_task: SurveyTaskProtocol, shuffle_passes=3) -> ThemeConsolidation:
     """Derives themes from a batch of comments, coordinating
     multiple shuffled passes to avoid LLM positional bias and
     then combining the results of each pass into a single result"""
@@ -141,7 +142,6 @@ async def derive_themes(task_input: CommentBatch, survey_task: SurveyTaskProtoco
     return final_task_result
 
 
-    
 class CombineThemes(SurveyTaskProtocol):
     """Class for combining themes into fewer common themes"""
     def __init__(self, survey_question: str):
@@ -169,34 +169,6 @@ class CombineThemes(SurveyTaskProtocol):
                 theme_str += f"</theme>\n"
                 theme_str += "\n"
             return theme_str
-
-#         system_message = f"""You are a highly-skilled assistant that works with themes \
-# from student course feedback comments. A theme is a short phrase that summarizes \
-# a piece of feedback that is expressed by multiple students. You respond only with a JSON array.
-
-# You will be given a list of themes that were derived from student course feedback comments. \
-# Each theme has a short title, a description, and a list of citations that are exact quotes supporting \
-# the theme. These themes were derived from survey responses to the question: "{self.survey_question}" \
-# Your task is to combine similar themes. 
-
-# If there are two themes that have the same title, then combine them into a single theme. \
-# If there are two themes that have titles and descriptions that are very similar, then combine \
-# them into a single theme. For example, you might combine the themes "Helpful Videos" and \
-# "Videos were helpful" into a single theme with the title "Helpful Videos". Another example: you \
-# might combine "Clinical Applications" and "Real-world examples" into a single theme with the \
-# title "Clinical Applications". 
-
-# When combining themes, you can either create a new description or use one of the existing descriptions \
-# if it applies to both themes. 
-
-# When combining themes, you should combine the citations from the combined themes into \
-# a single list of citations. For example, if you are combining two themes and each had 3 citations, \
-# then the combined theme would have 6 citations. The only exception to that is if any of the citations \
-# in the combined theme are exact duplicates. In that case, remove one of the duplicate \
-# quotes. Do not alter the citations in any other way. 
-
-# Once you have done your combining, respond with a JSON array of theme objects, representing \
-# the combined themes. Each theme object should have a title field, a description field, and a citations field."""
 
         alt_system_message = f"""You are an assistant who is highly skilled at working with \
 student feedback surveys. Your task is to thoroughly analyze and consolidate a list \
@@ -241,7 +213,6 @@ You will now be presented with the original list of themes."""
         ]
 
         return messages
-
 
     @property
     def result_class(self) -> Type[OpenAISchema]:

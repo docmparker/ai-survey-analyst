@@ -10,10 +10,6 @@ from survey_analysis import single_input_task as sit
 
 # Create the models
 
-class ThematicAnalysisResult(OpenAISchema):
-    """Store excerpts containing a particular goal focus extracted from a student comment"""
-    excerpts: list[str] = Field([], description="A list of excerpts related to the goal focus")
-
 class Theme(OpenAISchema):
     """Store a theme and relevant extracted quotes derived from a batch of comments"""
     title: str = Field("", description="A short name for the theme")

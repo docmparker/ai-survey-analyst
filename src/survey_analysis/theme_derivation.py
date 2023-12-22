@@ -42,9 +42,8 @@ class CommentBatch(InputModel, BaseModel):
 
 class ThemeConsolidation(OpenAISchema, InputModel):
     """Store the results from the process of combining a list of themes derived from a batch of comments"""
-    step1_reasoning: str = Field("", description="The reasoning for combining themes")
+    step1_reasoning: str = Field(..., description="The reasoning for combining themes")
     step2_intermediate_themes: DerivedThemes = Field(..., description="The intermediate themes after combining similar themes")
-    final_combined_themes: list[Theme] = Field(..., description="The final list of all consolidated themes")
 
     def is_empty(self) -> bool:
         """Returns True if all themes are empty"""
@@ -168,40 +167,35 @@ class CombineThemes(SurveyTaskProtocol):
             return theme_str
 
         system_message = f"""You are an assistant who is highly skilled at working with \
-student feedback surveys. Your task is to thoroughly analyze and consolidate a list \
-of themes derived from student feedback on an online course. Each theme consists of a \
-'title', 'description', and 'citations' (a list of exact quotes from students). These \
-themes were derived from survey responses to the question: "{self.survey_question}". \
-Your primary focus is on merging themes that cover the same or very similar topics, \
-based on their titles and descriptions.
+student feedback surveys. You will receive a list of themes. Your task is to merge \
+themes that cover the same or very similar topics, based on theme titles and descriptions. \
+Each theme consists of a 'title', 'description', and 'citations' (a list of exact quotes from \
+students). These themes were derived from survey responses to the question: "{self.survey_question}". 
+
+Step 1:
 
 First, identify similar themes. Review each theme and compare with others to find content \
 similarities. Look for themes with overlapping or complementary content, even if their titles \
 are not identical. For instance, 'Expert Instruction' and 'Expert Instructors' might \
 cover similar content from different angles and should be considered for merging. Similarly, \
 'Interactive Learning' and 'Hands-On Modules' may also overlap significantly in content. \
-Save your detailed reasoning from this first step for later output in a JSON object, under the \
-key 'step1_reasoning'.
+Record your reasoning from this step.
+
+Step 2:
 
 Next, merge and refine themes: Having identified similar themes:
    - Combine their citations into one list, removing any duplicates.
    - Create a new, consolidated title that captures the essence of the merged themes.
    - Write a comprehensive description that encompasses all aspects of the themes being merged.
 
-Save the output of this step for later output in a JSON object, under the key \
-'step2_intermediate_themes', as a list of themes including the 'title', \
-'description', and 'citations' for each theme.
+Save the output of this step as 'step2_intermediate_themes', \
+a list of themes including the 'title', 'description', and 'citations' for each theme.
 
-Finally, look for any unique themes from the original list of themes that may have been lost \
-in the consolidation and, if necessary, update the consolidated list of themes to include \
-those. If no themes were lost, just repeat the whole list of themes for the output of this step. \
-Save the final, consolidated list of themes for later output in a JSON object under the \
-key 'final_combined_themes' as a list of theme objects, each containing title, description, and citations.
+Step 3:
 
-After you have completed all of these steps, present the final overall results in a \
-JSON object, including 'step1_reasoning', 'step2_intermediate_themes', and 'final_combined_themes'.
-
-You will now be presented with the original list of themes."""
+Finally, review your work and look for any unique themes from the original list of themes \
+that may have been lost in step 2. Update the consolidated list of themes \
+in step 2 to include those.""" 
 
         user_message = f"""{format_themes(task_input)}"""
 

@@ -1,7 +1,8 @@
 import json
 from pprint import pprint
 import random
-from instructor.function_calls import OpenAISchema
+# from instructor.function_calls import OpenAISchema
+from .utils import OpenAISchema
 from .single_input_task import SurveyTaskProtocol, InputModel, CommentModel
 from pydantic import BaseModel, Field
 from typing import Type
@@ -12,7 +13,7 @@ from survey_analysis import single_input_task as sit
 
 class Theme(OpenAISchema):
     """Store a theme and relevant extracted quotes derived from a batch of comments"""
-    title: str = Field("", description="A short name for the theme")
+    theme_title: str = Field("", description="A short name for the theme")
     description: str = Field("", description="A description of the theme")
     citations: list[str] = Field([], description="A list of citations related to the theme")
 
@@ -24,7 +25,7 @@ class DerivedThemes(OpenAISchema, InputModel):
         """Returns True if all themes are empty"""
         return len(self.themes) == 0
 
-class CommentBatch(InputModel, BaseModel):
+class CommentBatch(InputModel, OpenAISchema):
     """Wraps a batch of comments. Used by tasks that take a batch of comments."""
     comments: list[CommentModel] = Field([], description="A list of comments")
 
@@ -72,7 +73,7 @@ present in the comments. Examples of themes are: "Helpful Videos", "Clinical App
 and "Interactive Content".
 
 Once you have derived the themes, respond with a JSON array of theme objects. \
-Each theme object should have a 'title' field (which \
+Each theme object should have a 'theme_title' field (which \
 gives a short name for the theme in 5 words or less), a 'description' field which describes the \
 theme in two sentences or less, and a 'citations' \
 field, which is an array of 3 exact quotes from distinct survey comments \
@@ -114,7 +115,7 @@ async def derive_themes(task_input: CommentBatch, survey_task: SurveyTaskProtoco
                                                           result_class=survey_task.result_class)
         # show the theme titles and descriptions
         for theme in task_result.themes:
-            print(f"title: {theme.title}")
+            print(f"title: {theme.theme_title}")
             print(f"description: {theme.description}")
             print(f"citations: {theme.citations}")
             print()
@@ -153,7 +154,7 @@ class CombineThemes(SurveyTaskProtocol):
             # flatten the list of derived themes in the batch
             for theme in derived_themes.themes:
                 theme_str += f"<theme>\n"
-                theme_str += f"title: {theme.title}\n"
+                theme_str += f"title: {theme.theme_title}\n"
                 theme_str += f"description: {theme.description}\n"
                 theme_str += f"citations:\n"
                 for citation in theme.citations:
@@ -165,7 +166,7 @@ class CombineThemes(SurveyTaskProtocol):
         system_message = f"""You are an assistant who is highly skilled at working with \
 student feedback surveys. You will receive a list of themes. Your task is to merge \
 themes that cover the same or very similar topics, based on theme titles and descriptions. \
-Each theme consists of a 'title', 'description', and 'citations' (a list of exact quotes from \
+Each theme consists of a 'theme_title', 'description', and 'citations' (a list of exact quotes from \
 students). These themes were derived from survey responses to the question: "{self.survey_question}". 
 
 Step 1:
@@ -185,13 +186,13 @@ Next, merge and refine themes: Having identified similar themes:
    - Write a comprehensive description that encompasses all aspects of the themes being merged.
 
 Save the output of this step as 'step2_intermediate_themes', \
-a list of themes including the 'title', 'description', and 'citations' for each theme.
+a list of themes including the 'theme_title', 'description', and 'citations' for each theme.
 
 Step 3:
 
 Finally, review your work and look for any unique themes from the original list of themes \
 that may have been lost in step 2. Update the consolidated list of themes \
-in step 2 to include those.""" 
+in step 2 to include those. Also remove any duplicate citations in each list of citations.""" 
 
         user_message = f"""{format_themes(task_input)}"""
 

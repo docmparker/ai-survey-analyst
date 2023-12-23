@@ -1,5 +1,5 @@
-from instructor.function_calls import OpenAISchema
-from .utils import comment_has_content
+# from instructor.function_calls import OpenAISchema
+from .utils import OpenAISchema
 from .single_input_task import InputModel, SurveyTaskProtocol, CommentModel
 from pydantic import BaseModel, Field
 from typing import Type

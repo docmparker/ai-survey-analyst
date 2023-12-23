@@ -1,10 +1,10 @@
 from typing import Callable
-from instructor.function_calls import OpenAISchema, Mode
+# from instructor.function_calls import OpenAISchema, Mode
 from pydantic import BaseModel
 from dataclasses import dataclass
 from openai import AsyncOpenAI
 import httpx
-from .utils import comment_has_content
+from .utils import comment_has_content, OpenAISchema
 from abc import ABC, abstractmethod
 from typing import Any, Protocol, Type
 
@@ -55,7 +55,7 @@ async def apply_task(task_input: InputModel, get_prompt: GetPrompt, result_class
     
     # expect partial application of get_prompt if needs something like the tags_list
     messages = get_prompt(task_input)
-    fn_schema = result_class.openai_schema
+    fn_schema = result_class.openai_schema()
 
     response = await aclient.chat.completions.create(
         model=llm_config.model,
@@ -66,7 +66,9 @@ async def apply_task(task_input: InputModel, get_prompt: GetPrompt, result_class
     )
 
     # assert isinstance(expertise, Expertise)
-    result = result_class.from_response(response, mode=Mode.TOOLS)
+    # result = result_class.from_response(response, mode=Mode.TOOLS)
+    args = response.choices[0].message.tool_calls[0].function.arguments
+    result = result_class.model_validate_json(args)
 
     return result
 

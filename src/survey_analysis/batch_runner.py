@@ -1,4 +1,5 @@
-from instructor.function_calls import OpenAISchema, Mode
+# from instructor.function_calls import OpenAISchema, Mode
+from .utils import OpenAISchema
 from typing import Callable
 import time
 import asyncio

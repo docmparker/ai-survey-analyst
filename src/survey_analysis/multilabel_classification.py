@@ -1,11 +1,11 @@
 from enum import Enum
 from pydantic import Field, BaseModel, ConfigDict
 from pydantic.main import create_model
-from instructor.function_calls import OpenAISchema
+# from instructor.function_calls import OpenAISchema
+from .utils import OpenAISchema
 import yaml
 from .single_input_task import SurveyTaskProtocol, InputModel, CommentModel
 from typing import Type
-from .utils import comment_has_content
 
 # load the tags as a list of dicts, each with a 'topic' and 'description'
 # in the yaml, these are all under the root of 'tags'

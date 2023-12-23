@@ -4,7 +4,7 @@ import random
 # from instructor.function_calls import OpenAISchema
 from .utils import OpenAISchema
 from .single_input_task import SurveyTaskProtocol, InputModel, CommentModel
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validate_arguments, conint
 from typing import Type
 from survey_analysis import single_input_task as sit
 
@@ -101,10 +101,16 @@ less than 3 quotes, then include as many as you can."""
 
 # turn this into a pipeline
 # async def derive_themes(task_input: CommentBatch, survey_task: DeriveThemes, shuffle_passes=3) -> ThemeConsolidation:
-async def derive_themes(comments: list[str | None], question: str, shuffle_passes=3) -> ThemeConsolidation:
+@validate_arguments
+async def derive_themes(comments: list[str | None], question: str, shuffle_passes: conint(ge=1, le=10) = 3) -> ThemeConsolidation:
     """Derives themes from a batch of comments, coordinating
     multiple shuffled passes to avoid LLM positional bias and
     then combining the results of each pass into a single result.
+
+    Args: 
+        comments: A list of comments
+        question: The survey question that the comments are in response to
+        shuffle_passes: The number of times to shuffle the comments and derive themes (default 3
     
     Example usage:
     ```
@@ -137,6 +143,10 @@ async def derive_themes(comments: list[str | None], question: str, shuffle_passe
 
     print(f"number of total themes across {shuffle_passes} passes: {len(results)}")
 
+    # if there was only one pass, return the result of that pass
+    if shuffle_passes == 1:
+        return results[0]
+    
     reduce_task_input = DerivedThemes(themes=results)
     reduce_task = CombineThemes(survey_question=survey_task.question)
     print("\ncombining results\n")

@@ -1,6 +1,6 @@
 from typing import Callable
 # from instructor.function_calls import OpenAISchema, Mode
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dataclasses import dataclass
 from openai import AsyncOpenAI
 import httpx
@@ -90,6 +90,22 @@ class SurveyTaskProtocol(Protocol):
         """Returns the result class for the task.
         The models for task results should have defaults to account for comment with no content. 
         The individual task processing routine uses the default if a comment has no content so 
-        as not to incur any model costs and save latency.
+        as not to incur any model costs and save latency. This could be enforced with a 
+        metaclass if desired (see DefaultsEnforcedMeta), but it is not currently.
         """
         pass
+
+class DefaultsEnforcedMeta(type(BaseModel)):
+    """Enforces defaults for a result class
+
+    Example usage:
+    class MyModel(OpenAISchema, InputModel, metaclass=DefaultsEnforcedMeta):
+        my_field: str = Field("default", description="A description of my field")
+        another_field: int = Field(0, description="Another field with a default value")
+    """
+    def __new__(mcs, name, bases, attrs):
+        for attr_name, attr_value in attrs.items():
+            if isinstance(attr_value, Field) and attr_value.default == ...:
+                raise TypeError(f"Field {attr_name} must have a default value")
+        return super().__new__(mcs, name, bases, attrs)
+

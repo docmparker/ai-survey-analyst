@@ -202,7 +202,7 @@ Record your reasoning from this step.
 
 Step 2:
 
-Next, merge and refine themes: Having identified similar themes:
+Next, merge and refine themes. Having identified similar themes:
    - Combine their citations into one list, removing any duplicates.
    - Create a new, consolidated title that captures the essence of the merged themes.
    - Write a comprehensive description that encompasses all aspects of the themes being merged.

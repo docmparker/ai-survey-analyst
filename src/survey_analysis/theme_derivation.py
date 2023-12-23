@@ -99,11 +99,24 @@ less than 3 quotes, then include as many as you can."""
         """Returns the result class for theme derivation"""
         return DerivedThemes
 
-
-async def derive_themes(task_input: CommentBatch, survey_task: SurveyTaskProtocol, shuffle_passes=3) -> ThemeConsolidation:
+# turn this into a pipeline
+# async def derive_themes(task_input: CommentBatch, survey_task: DeriveThemes, shuffle_passes=3) -> ThemeConsolidation:
+async def derive_themes(comments: list[str | None], question: str, shuffle_passes=3) -> ThemeConsolidation:
     """Derives themes from a batch of comments, coordinating
     multiple shuffled passes to avoid LLM positional bias and
-    then combining the results of each pass into a single result"""
+    then combining the results of each pass into a single result.
+    
+    Example usage:
+    ```
+    question = "What were the best parts of the course?"
+    comments = sanitized_survey['best_parts'].tolist()[:100]
+    sample_output = await derive_themes(comments=comments, question=question)
+    ```
+    """
+
+    survey_task: DeriveThemes = DeriveThemes(question=question)
+    task_input: CommentBatch = CommentBatch(comments=[CommentModel(comment=comment) for comment in comments])
+    
     # run survey_task on task_input shuffle_passes times and combine results
     results: list[DerivedThemes] = []
     for i in range(shuffle_passes):
@@ -119,7 +132,6 @@ async def derive_themes(task_input: CommentBatch, survey_task: SurveyTaskProtoco
             print(f"description: {theme.description}")
             print(f"citations: {theme.citations}")
             print()
-        # pprint(json.loads(task_result.model_dump_json()))
 
         results.extend(task_result.themes)
 
@@ -127,7 +139,7 @@ async def derive_themes(task_input: CommentBatch, survey_task: SurveyTaskProtoco
 
     reduce_task_input = DerivedThemes(themes=results)
     reduce_task = CombineThemes(survey_question=survey_task.question)
-    print("combining results")
+    print("\ncombining results\n")
     final_task_result = await sit.apply_task(task_input=reduce_task_input,
                                             get_prompt=reduce_task.prompt_messages,
                                             result_class=reduce_task.result_class)

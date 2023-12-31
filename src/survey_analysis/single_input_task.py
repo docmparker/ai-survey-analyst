@@ -72,7 +72,7 @@ async def apply_task(task_input: InputModel, get_prompt: GetPrompt, result_class
 
     return result
 
-class SurveyTaskProtocol(Protocol):
+class SurveyTaskProtocol(ABC):
     """Abstract class for a survey task"""
 
     @abstractmethod

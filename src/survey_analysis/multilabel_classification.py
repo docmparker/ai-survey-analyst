@@ -118,7 +118,7 @@ async def multilabel_classify(*, comments: list[str | None], tags_list: list[dic
     if not tags_list:
         tags_list = default_tags_list
 
-    survey_task: SurveyTaskProtocol = MultiLabelClassification(tags_list=default_tags_list)
+    survey_task: SurveyTaskProtocol = MultiLabelClassification(tags_list=tags_list)
     comments_to_test: list[CommentModel] = [CommentModel(comment=comment) for comment in comments]
     mlc_task = partial(apply_task, get_prompt=survey_task.prompt_messages, result_class=survey_task.result_class)
     classifications = await br.process_tasks(comments_to_test, mlc_task)

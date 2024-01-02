@@ -41,6 +41,7 @@ class ThemeConsolidation(OpenAISchema, InputModel):
     """Store the results from the process of combining a list of themes derived from a batch of comments"""
     step1_reasoning: str = Field(..., description="The reasoning for combining themes")
     step2_intermediate_themes: DerivedThemes = Field(..., description="The intermediate themes after combining similar themes")
+    final_themes: DerivedThemes = Field(DerivedThemes(), description="All themes after combining similar themes")
 
     def is_empty(self) -> bool:
         """Returns True if all themes are empty"""
@@ -203,18 +204,22 @@ Record your reasoning from this step.
 Step 2:
 
 Next, merge and refine themes. Having identified similar themes:
-   - Combine their citations into one list, removing any duplicates.
-   - Create a new, consolidated title that captures the essence of the merged themes.
-   - Write a comprehensive description that encompasses all aspects of the themes being merged.
+   - Combine their citations into one list, removing any exact duplicate citations.
+   - For each merged theme, create a new, consolidated title that captures the essence of the merged theme.
+   - For each merged theme, write a comprehensive description that encompasses all aspects of the themes being merged.
+
+For each unique theme, leave it as is.
 
 Save the output of this step as 'step2_intermediate_themes', \
 a list of themes including the 'theme_title', 'description', and 'citations' for each theme.
 
 Step 3:
 
-Finally, review your work and look for any unique themes from the original list of themes \
-that may have been lost in step 2. Update the consolidated list of themes \
-in step 2 to include those. Also remove any duplicate citations in each list of citations.""" 
+Finally, review your work. Did you do a good job? This is your chance to correct any oversights. \
+Also remove any duplicate citations in each list of citations.
+
+Save the output of this step as 'final_themes'. Include a theme_title', \
+'description', and 'citations' for each theme.""" 
 
         user_message = f"""{format_themes(task_input)}"""
 

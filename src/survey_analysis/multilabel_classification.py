@@ -1,10 +1,12 @@
 from enum import Enum
-from pydantic import Field, BaseModel, ConfigDict
+from pydantic import Field, BaseModel, ConfigDict, validate_arguments
 from pydantic.main import create_model
 # from instructor.function_calls import OpenAISchema
+from functools import partial
 from .utils import OpenAISchema
 import yaml
-from .single_input_task import SurveyTaskProtocol, InputModel, CommentModel
+from .single_input_task import SurveyTaskProtocol, InputModel, CommentModel, apply_task
+from . import batch_runner as br
 from typing import Type
 
 # load the tags as a list of dicts, each with a 'topic' and 'description'
@@ -104,4 +106,21 @@ behind every assigned category in the output."""
             self._result_class = MultilabelClassificationResult
 
         return self._result_class
+
+
+@validate_arguments
+async def multilabel_classify(*, comments: list[str | None], tags_list: list[dict[str, str]] | None = None) -> OpenAISchema:
+    """Multilabel classify a list of comments, based on a list of categories (tags)
     
+    Returns a list of ExcerptExtractionResult objects
+    """
+
+    if not tags_list:
+        tags_list = default_tags_list
+
+    survey_task: SurveyTaskProtocol = MultiLabelClassification(tags_list=default_tags_list)
+    comments_to_test: list[CommentModel] = [CommentModel(comment=comment) for comment in comments]
+    mlc_task = partial(apply_task, get_prompt=survey_task.prompt_messages, result_class=survey_task.result_class)
+    classifications = await br.process_tasks(comments_to_test, mlc_task)
+
+    return classifications

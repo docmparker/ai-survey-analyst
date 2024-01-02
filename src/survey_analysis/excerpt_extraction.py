@@ -1,8 +1,10 @@
 # from instructor.function_calls import OpenAISchema
 from .utils import OpenAISchema
-from .single_input_task import InputModel, SurveyTaskProtocol, CommentModel
-from pydantic import BaseModel, Field
+from .single_input_task import InputModel, SurveyTaskProtocol, CommentModel, apply_task
+from pydantic import BaseModel, Field, validate_arguments
 from typing import Type
+from functools import partial
+from . import batch_runner as br
 
 
 # Create the model - here we do it outside the class so it can also be used elsewhere if desired
@@ -62,3 +64,29 @@ into a single excerpt."""
         """Returns the result class for multilabel classification"""
         return ExcerptExtractionResult
     
+
+# @validate_arguments
+# async def extract_excerpts(*, comment: str, question: str, goal_focus: str) -> OpenAISchema:
+#     """Extract excerpts containing a particular goal focus from a student comment"""
+#     survey_task = ExcerptExtraction(goal_focus, question)
+#     task_input = CommentModel(comment=comment)
+#     result = await apply_task(task_input=task_input,
+#                                         get_prompt=survey_task.prompt_messages,
+#                                         result_class=survey_task.result_class)
+#     return result
+
+
+# TODO: consider making this a class method
+@validate_arguments
+async def extract_excerpts(*, comments: list[str | None], question: str, goal_focus: str) -> OpenAISchema:
+    """Extract excerpts from a list of comments, based on a particular question and goal_focus
+    
+    Returns a list of ExcerptExtractionResult objects
+    """
+
+    comments_to_test: list[CommentModel] = [CommentModel(comment=comment) for comment in comments]
+    survey_task: SurveyTaskProtocol = ExcerptExtraction(goal_focus=goal_focus, question=question)
+    ex_task = partial(apply_task, get_prompt=survey_task.prompt_messages, result_class=survey_task.result_class)
+    extractions = await br.process_tasks(comments_to_test, ex_task)
+
+    return extractions

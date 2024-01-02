@@ -4,8 +4,8 @@ from pydantic import BaseModel
 
 def comment_has_content(comment: str) -> bool:
     """Check if a comment has content"""
-    none_equivalents = ['N/A', None, 'None', 'null', '']
-    return False if ((not comment) or (comment in none_equivalents)) else True
+    none_equivalents = ['n/a', None, 'none', 'null', '', 'na']
+    return False if ((not comment) or (comment.lower() in none_equivalents)) else True
 
 
 class OpenAISchema(BaseModel):

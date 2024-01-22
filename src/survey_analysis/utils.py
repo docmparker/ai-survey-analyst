@@ -13,7 +13,7 @@ class OpenAISchema(BaseModel):
     def openai_schema(cls):
         assert cls.__doc__, f"{cls.__name__} is missing a docstring."
         assert (
-            "title" not in cls.model_fields.keys()
+            "title" not in cls.model_fields
         ), "`title` is a reserved keyword and cannot be used as a field name."
         schema_dict = cls.model_json_schema()
         cls.remove_a_key(schema_dict, "title")
@@ -27,7 +27,7 @@ class OpenAISchema(BaseModel):
     @classmethod
     def remove_a_key(cls, d, remove_key):
         if isinstance(d, dict):
-            for key in list(d.keys()):
+            for key in d:
                 if key == remove_key:
                     del d[key]
                 else:

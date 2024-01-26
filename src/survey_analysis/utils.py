@@ -27,7 +27,7 @@ class OpenAISchema(BaseModel):
     @classmethod
     def remove_a_key(cls, d, remove_key):
         if isinstance(d, dict):
-            for key in d:
+            for key in list(d.keys()):
                 if key == remove_key:
                     del d[key]
                 else:

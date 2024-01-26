@@ -12,10 +12,10 @@ from survey_analysis import single_input_task as sit
 # Create the models
 
 class Theme(OpenAISchema):
-    """Store a theme and relevant extracted quotes derived from a batch of comments"""
+    """A theme and relevant extracted quotes derived from a batch of comments"""
     theme_title: str = Field("", description="A short name for the theme")
     description: str = Field("", description="A description of the theme")
-    citations: list[str] = Field([], description="A list of citations related to the theme")
+    citations: list[str] = Field([], description="A list of citations (exact extracted quotes) related to the theme")
 
 class DerivedThemes(OpenAISchema, InputModel):
     """Store the themes derived from a batch of comments"""
@@ -37,15 +37,35 @@ class CommentBatch(InputModel, OpenAISchema):
         """Shuffles the comments"""
         random.shuffle(self.comments)
 
-class ThemeConsolidation(OpenAISchema, InputModel):
-    """Store the results from the process of combining a list of themes derived from a batch of comments"""
-    step1_reasoning: str = Field(..., description="The reasoning for combining themes")
-    step2_intermediate_themes: DerivedThemes = Field(..., description="The intermediate themes after combining similar themes")
-    final_themes: DerivedThemes = Field(DerivedThemes(), description="All themes after combining similar themes")
+# could make combine_themes have its field be a list of reasoning and combined_themes and let it decide
+# how many to include. If these are classes refer in the system prompt as Reasoning and CombinedThemes
+class Reasoning(OpenAISchema, InputModel):
+    """The reasoning for combining themes"""
+    reasoning: str = Field(..., description="The reasoning for combining themes")
 
     def is_empty(self) -> bool:
         """Returns True if all themes are empty"""
-        return len(self.final_combined_themes) == 0
+        return len(self.reasoning) == 0
+    
+# this is basically the same class as DerivedThemes, but with a different name and description
+# to potentially enhance the tool use based on a more descriptive schema for this task
+class UpdatedThemes(OpenAISchema, InputModel):
+    """Updated themes after combining similar themes, including merged themes and themes that didn't need merging"""
+    themes: list[Theme] = Field([], description="A list of themes")
+
+    def is_empty(self) -> bool:
+        """Returns True if all themes are empty"""
+        return len(self.themes) == 0
+
+# This gets converted to the function/tool schema for combining themes, hence the non-classy name
+class combine_themes(OpenAISchema, InputModel):
+    """Consolidates a list of themes by combining very similar themes and keeping unique themes"""
+    reasoning: str = Field(..., description="The reasoning for combining themes")
+    updated_themes: UpdatedThemes = Field(..., description="The updated themes after combining similar themes")
+
+    def is_empty(self) -> bool:
+        """Returns True if all themes are empty"""
+        return len(self.reasoning_and_themes) == 0
 
 
 class DeriveThemes(SurveyTaskProtocol):
@@ -103,7 +123,7 @@ less than 3 quotes, then include as many as you can."""
 # turn this into a pipeline
 # async def derive_themes(task_input: CommentBatch, survey_task: DeriveThemes, shuffle_passes=3) -> ThemeConsolidation:
 @validate_arguments
-async def derive_themes(comments: list[str | None], question: str, shuffle_passes: conint(ge=1, le=10) = 3) -> ThemeConsolidation:
+async def derive_themes(comments: list[str | None], question: str, shuffle_passes: conint(ge=1, le=10) = 3) -> combine_themes:
     """Derives themes from a batch of comments, coordinating
     multiple shuffled passes to avoid LLM positional bias and
     then combining the results of each pass into a single result.
@@ -203,23 +223,22 @@ Record your reasoning from this step.
 
 Step 2:
 
-Next, merge and refine themes. Having identified similar themes:
+Next, merge and refine themes. Having identified similar themes in the previous step:
    - Combine their citations into one list, removing any exact duplicate citations.
    - For each merged theme, create a new, consolidated title that captures the essence of the merged theme.
    - For each merged theme, write a comprehensive description that encompasses all aspects of the themes being merged.
 
-For each unique theme, leave it as is.
+For each unique theme that doesn't need merging, leave it as is.
 
-Save the output of this step as 'step2_intermediate_themes', \
-a list of themes including the 'theme_title', 'description', and 'citations' for each theme.
+Save the updated themes from this step. Include all of the new merged ones and the ones that didn't need \
+merging. For every theme, include the 'theme_title', 'description', and 'citations'.
 
 Step 3:
 
-Finally, review your work. Did you do a good job? This is your chance to correct any oversights. \
-Also remove any duplicate citations in each list of citations.
-
-Save the output of this step as 'final_themes'. Include a theme_title', \
-'description', and 'citations' for each theme.""" 
+Review your work. Did you do an excellent job? If you missed combining any similar themes, \
+combine those before saving the final themes. As before, don't forget to remove any \
+duplicate citations in each list of citations. Do your best. If you have done an outstanding \
+job, you will get a $500 tip."""
 
         user_message = f"""{format_themes(task_input)}"""
 
@@ -233,4 +252,4 @@ Save the output of this step as 'final_themes'. Include a theme_title', \
     @property
     def result_class(self) -> Type[OpenAISchema]:
         """Returns the result class for theme derivation combining"""
-        return ThemeConsolidation
+        return combine_themes

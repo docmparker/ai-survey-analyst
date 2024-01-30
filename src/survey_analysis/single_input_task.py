@@ -27,9 +27,10 @@ class InputModel(ABC):
         """Returns True if the input is empty"""
         pass
 
-class CommentModel(InputModel, BaseModel):
+class CommentModel(InputModel, OpenAISchema):
     """Wraps a single comment. Used by tasks that take a single comment or a list of comments."""
-    comment: str | None = None
+    # comment: str | None = None
+    comment: str | None = Field(None, description="The comment to process")
 
     def is_empty(self) -> bool:
         """Returns True if the input is empty"""

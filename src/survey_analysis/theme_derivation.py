@@ -65,7 +65,7 @@ class combine_themes(OpenAISchema, InputModel):
 
     def is_empty(self) -> bool:
         """Returns True if all themes are empty"""
-        return len(self.reasoning_and_themes) == 0
+        return len(self.updated_themes) == 0
 
 
 class DeriveThemes(SurveyTaskProtocol):

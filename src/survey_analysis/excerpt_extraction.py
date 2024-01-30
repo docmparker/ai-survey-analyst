@@ -61,7 +61,7 @@ into a single excerpt."""
 
     @property
     def result_class(self) -> Type[OpenAISchema]:
-        """Returns the result class for multilabel classification"""
+        """Returns the result class for extraction"""
         return ExcerptExtractionResult
     
 
@@ -78,7 +78,7 @@ into a single excerpt."""
 
 # TODO: consider making this a class method
 @validate_arguments
-async def extract_excerpts(*, comments: list[str | None], question: str, goal_focus: str) -> OpenAISchema:
+async def extract_excerpts(*, comments: list[str | None], question: str, goal_focus: str) -> list[OpenAISchema]:
     """Extract excerpts from a list of comments, based on a particular question and goal_focus
     
     Returns a list of ExcerptExtractionResult objects

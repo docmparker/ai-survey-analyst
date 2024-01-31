@@ -1,6 +1,7 @@
 /data/
 /notebooks/
 /reports/
+/src/survey_analysis/comment_deidentification.py
 .env
 
 .DS_Store

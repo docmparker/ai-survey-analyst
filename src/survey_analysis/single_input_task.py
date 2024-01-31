@@ -10,11 +10,20 @@ from typing import Any, Protocol, Type
 
 aclient = AsyncOpenAI(timeout=httpx.Timeout(timeout=120.0))
 
-@dataclass
-class LLMConfig:
+# @dataclass
+# class LLMConfig:
+#     """Model class for LLM configuration"""
+#     model: str = 'gpt-4-1106-preview'
+#     temperature: float = 0.0
+#     logprobs: bool | None = None
+#     top_logprobs: int | None = None # may want to use pydantic to restrict this to [0, 5]
+
+class LLMConfig(BaseModel):
     """Model class for LLM configuration"""
     model: str = 'gpt-4-1106-preview'
     temperature: float = 0.0
+    logprobs: bool | None = None
+    top_logprobs: int | None = Field(None, ge=0, le=5, description="The number of logprobs to return")
 
 
 class InputModel(ABC):
@@ -44,7 +53,10 @@ GetPrompt = Callable[[BaseModel], list[dict[str, str]]]
 ApplyTask = Callable[[BaseModel, GetPrompt, OpenAISchema, LLMConfig | None], OpenAISchema] 
 
 
-async def apply_task(task_input: InputModel, get_prompt: GetPrompt, result_class: OpenAISchema, llm_config: LLMConfig=None) -> OpenAISchema:
+async def apply_task(task_input: InputModel, 
+                     get_prompt: GetPrompt, 
+                     result_class: OpenAISchema, 
+                     llm_config: LLMConfig=None) -> OpenAISchema:
     """Gets the result of applying an NLP task to a comment, list of comments, or some other unit or work."""
     if llm_config is None:
         llm_config = LLMConfig()

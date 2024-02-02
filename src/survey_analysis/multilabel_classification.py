@@ -55,18 +55,28 @@ class MultiLabelClassification(SurveyTaskProtocol):
     def prompt_messages(self, task_input:CommentModel) -> list[dict[str, str]]:
         """Creates the messages for the multilabel classification prompt"""
 
+        delimiter = "####"
+
         system_message = f"""You are an assistant that classifies student course \
-feedback comments.  You respond only with a JSON object.
+feedback comments.  You respond only with JSON output.
 
 You will be provided with a comment from a student course feedback survey. \
-Categorize the comment with as many of the following categories as apply:
+The comment will be delimited by {delimiter} characters. \
+The goal is to categorize the comment with as many of the following categories as apply:
 
 {self._tags_for_prompt}
 
-Think step-by-step to arrive at a correct classification. Include your reasoning \
-behind every assigned category in the output."""
+Step 1: Reason through what categories you will choose and why.
+- Include your reasoning in the "reasoning" field.
 
-        user_message = f"""{task_input.comment}"""
+Step 2. Record the categories you choose.
+- Record the categories you choose in the "categories" field.
+- If more than one category applies, include all that apply.
+
+When you are done categorizing the comment, return your reasoning and categories \
+in the JSON output. Do your best. I will tip you $500 if you do an excellent job."""
+
+        user_message = f"""{delimiter}{task_input.comment}{delimiter}"""
 
         messages =  [  
         {'role':'system', 'content': system_message},

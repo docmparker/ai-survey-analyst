@@ -1,8 +1,10 @@
-/data/
+/data/*
 /notebooks/
 /reports/
 /src/survey_analysis/comment_deidentification.py
 .env
+
+!/data/tags_8.yaml
 
 .DS_Store
 __pycache__/

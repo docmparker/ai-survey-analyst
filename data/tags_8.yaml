@@ -1,0 +1,24 @@
+tags:
+  - topic: "course logistics and fit"
+    description: course delivery (policy, support), cost, difficulty, time commitment, grading, credit, schedule, user fit, access, background (e.g. prereqs and appropriateness of course level).
+
+  - topic: "curriculum"
+    description: course content, curriculum, specific topics, course structure.  This focuses on the content and the pedagogical structure of the content, including flow and organization.  This also includes applied material such as clinical cases and case studies. Includes references to pre-recorded discussions between experts or between a doctor and a patient. Includes specific suggestions for additional courses or content.
+
+  - topic: "teaching modality"
+    description: video, visual, interactive, animation, step-by-step, deep dive, background builder (the format rather than the content/topic).
+
+  - topic: "teaching"
+    description: instructors, quality of teaching and explanations
+
+  - topic: "assessment"
+    description: quizzes, exams
+
+  - topic: "resources"
+    description: note taking tools, study guides, notepads, readings.  Includes other potential static resources like downloadable video transcripts.
+
+  - topic: "peer and teacher interaction"
+    description: includes chances for the student to interact with another person in the course (teacher or student).  This includes discussion forums, teacher-student or student-student interactions.  Includes requests for live sessions with teachers or live office hours.
+
+  - topic: "other"
+    description: catch-all for the rarer aspects that we'll encounter and also the 'na', 'thank you', etc. comments that don't really belong in the above bins.  Also for sufficiently general comments like 'all the course was terrific' that can't be narrowed down to one of the other categories.

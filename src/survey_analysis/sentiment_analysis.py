@@ -1,4 +1,5 @@
 # from instructor.function_calls import OpenAISchema
+from collections import namedtuple
 from .utils import OpenAISchema
 from .single_input_task import InputModel, SurveyTaskProtocol, CommentModel, apply_task_with_logprobs, LLMConfig
 from pydantic import Field, validate_arguments, model_validator
@@ -7,6 +8,7 @@ from functools import partial
 from . import batch_runner as br
 import openai.types.chat.chat_completion
 import numpy as np
+import math
 
 
 # Create the model - here we do it outside the class so it can also be used elsewhere if desired
@@ -49,6 +51,27 @@ class SentimentAnalysisResult(OpenAISchema):
                     for token in following_token['top_logprobs']]
 
         return self.sentiment_logprobs_   
+
+    @property
+    def classification_confidence(self) -> tuple[str, float]:
+        """Calculate confidence based on top 2 distinct logprob diff within positive, negative, neutral rankings"""
+        top_token, top_logprob = self.sentiment_logprobs[0]['token'], self.sentiment_logprobs[0]['logprob']
+
+        next_logprob = None
+        next_token = None
+        for i, val in enumerate(self.sentiment_logprobs, start=1):
+            if top_token.lower() != val['token'].lower():
+                next_logprob = val['logprob']
+                next_token = val['token']
+                break
+
+        confidence = namedtuple('Confidence', ['top_token', 'next_token', 'difference'])
+        return confidence(top_token, next_token, top_logprob - next_logprob if next_logprob is not None else math.inf)
+    
+    @property
+    def top_logprob(self) -> float:
+        """Returns the logprob for the top sentiment token"""
+        return self.sentiment_logprobs[0]['logprob']
 
 
 class SentimentAnalysis(SurveyTaskProtocol):
@@ -99,7 +122,7 @@ Do your best. I will tip you $500 if you do an excellent job."""
     
 
 @validate_arguments
-async def classify_sentiment(*, comments: list[str | None], question: str, goal_focus: str) -> list[OpenAISchema]:
+async def classify_sentiment(*, comments: list[str | None], question: str) -> list[OpenAISchema]:
     """Classify the sentiment for each of a list of comments, based on a particular question 
     
     Returns a list of SentimentAnalysisResult objects
@@ -111,6 +134,34 @@ async def classify_sentiment(*, comments: list[str | None], question: str, goal_
                       get_prompt=survey_task.prompt_messages, 
                       result_class=survey_task.result_class,
                       llm_config=LLMConfig(logprobs=True, top_logprobs=3))
-    extractions = await br.process_tasks(comments_to_test, sentiment_task)
+    sentiment_results = await br.process_tasks(comments_to_test, sentiment_task)
 
-    return extractions
+    return sentiment_results
+
+
+def sort_by_confidence(comments: list[str], sentiment_results: list[SentimentAnalysisResult]) -> list[tuple[str, SentimentAnalysisResult]]:
+    """Sort the comments and sentiment results by confidence, while keeping track of which comment goes with which result.
+    The confidence is calculated as the difference between the top and next highest logprob for the sentiment token, with the 
+    next highest logprob being the next highest distinct logprob ('positive' and 'Positive' are not distinct, for example).
+    
+    The results are sorted within each sentiment category, so that the top confidence for each sentiment category is at the top.
+    """
+    pairs = list(zip(comments, sentiment_results))
+
+    # Sort the pairs based on the result
+    pairs.sort(key=lambda pair: (pair[1].sentiment_logprobs[0]['token'], pair[1].classification_confidence.difference), reverse=True)
+
+    return pairs
+
+def sort_by_top_logprob(comments: list[str], sentiment_results: list[SentimentAnalysisResult]) -> list[tuple[str, SentimentAnalysisResult]]:
+    """Sort the comments and sentiment results by top logprob, while keeping track of which comment goes with which result.
+    
+    The results are sorted within each sentiment category, so that the top logprob for each sentiment category is at the top.
+    """
+    
+    pairs = list(zip(comments, sentiment_results))
+
+    # Sort the pairs based on the result
+    pairs.sort(key=lambda pair: (pair[1].sentiment_logprobs[0]['token'], pair[1].top_logprob), reverse=True)
+
+    return pairs

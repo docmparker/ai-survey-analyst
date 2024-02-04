@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 def comment_has_content(comment: str) -> bool:
     """Check if a comment has content"""
-    none_equivalents = ['n/a', None, 'none', 'null', '', 'na']
+    none_equivalents = ['n/a', None, 'none', 'null', '', 'na', 'nan']
     return False if ((not comment) or (comment.lower() in none_equivalents)) else True
 
 

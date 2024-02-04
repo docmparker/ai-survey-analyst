@@ -119,7 +119,7 @@ in the JSON output. Do your best. I will tip you $500 if you do an excellent job
 
 
 @validate_arguments
-async def multilabel_classify(*, comments: list[str | None], tags_list: list[dict[str, str]] | None = None) -> OpenAISchema:
+async def multilabel_classify(*, comments: list[str | float | None], tags_list: list[dict[str, str]] | None = None) -> OpenAISchema:
     """Multilabel classify a list of comments, based on a list of categories (tags)
     
     Returns a list of ExcerptExtractionResult objects

@@ -1,10 +1,9 @@
 import json
 from pprint import pprint
 import random
-# from instructor.function_calls import OpenAISchema
 from .utils import OpenAISchema
 from .single_input_task import SurveyTaskProtocol, InputModel, CommentModel
-from pydantic import BaseModel, Field, validate_arguments, conint
+from pydantic import Field, validate_arguments, conint
 from typing import Type
 from survey_analysis import single_input_task as sit
 
@@ -39,13 +38,13 @@ class CommentBatch(InputModel, OpenAISchema):
 
 # could make combine_themes have its field be a list of reasoning and combined_themes and let it decide
 # how many to include. If these are classes refer in the system prompt as Reasoning and CombinedThemes
-class Reasoning(OpenAISchema, InputModel):
-    """The reasoning for combining themes"""
-    reasoning: str = Field(..., description="The reasoning for combining themes")
+# class Reasoning(OpenAISchema, InputModel):
+#     """The reasoning for combining themes"""
+#     reasoning: str = Field(..., description="The reasoning for combining themes")
 
-    def is_empty(self) -> bool:
-        """Returns True if all themes are empty"""
-        return len(self.reasoning) == 0
+#     def is_empty(self) -> bool:
+#         """Returns True if all themes are empty"""
+#         return len(self.reasoning) == 0
     
 # this is basically the same class as DerivedThemes, but with a different name and description
 # to potentially enhance the tool use based on a more descriptive schema for this task
@@ -123,7 +122,7 @@ less than 3 quotes, then include as many as you can."""
 # turn this into a pipeline
 # async def derive_themes(task_input: CommentBatch, survey_task: DeriveThemes, shuffle_passes=3) -> ThemeConsolidation:
 @validate_arguments
-async def derive_themes(comments: list[str | None], question: str, shuffle_passes: conint(ge=1, le=10) = 3) -> combine_themes:
+async def derive_themes(comments: list[str | float | None], question: str, shuffle_passes: conint(ge=1, le=10) = 3) -> combine_themes:
     """Derives themes from a batch of comments, coordinating
     multiple shuffled passes to avoid LLM positional bias and
     then combining the results of each pass into a single result.

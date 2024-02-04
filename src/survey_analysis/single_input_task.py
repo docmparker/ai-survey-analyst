@@ -1,22 +1,12 @@
 from typing import Callable
-# from instructor.function_calls import OpenAISchema, Mode
-from pydantic import BaseModel, Field
-from dataclasses import dataclass
+from pydantic import BaseModel, Field, ConfigDict
 from openai import AsyncOpenAI
 import httpx
 from .utils import comment_has_content, OpenAISchema
 from abc import ABC, abstractmethod
-from typing import Any, Protocol, Type
+from typing import Type
 
 aclient = AsyncOpenAI(timeout=httpx.Timeout(timeout=120.0))
-
-# @dataclass
-# class LLMConfig:
-#     """Model class for LLM configuration"""
-#     model: str = 'gpt-4-1106-preview'
-#     temperature: float = 0.0
-#     logprobs: bool | None = None
-#     top_logprobs: int | None = None # may want to use pydantic to restrict this to [0, 5]
 
 class LLMConfig(BaseModel):
     """Model class for LLM configuration"""
@@ -38,8 +28,9 @@ class InputModel(ABC):
 
 class CommentModel(InputModel, OpenAISchema):
     """Wraps a single comment. Used by tasks that take a single comment or a list of comments."""
-    # comment: str | None = None
     comment: str | None = Field(None, description="The comment to process")
+
+    model_config = ConfigDict(coerce_numbers_to_str=True) # handle nans
 
     def is_empty(self) -> bool:
         """Returns True if the input is empty"""

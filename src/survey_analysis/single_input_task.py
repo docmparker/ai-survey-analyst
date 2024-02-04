@@ -10,7 +10,7 @@ aclient = AsyncOpenAI(timeout=httpx.Timeout(timeout=120.0))
 
 class LLMConfig(BaseModel):
     """Model class for LLM configuration"""
-    model: str = 'gpt-4-1106-preview'
+    model: str = 'gpt-4-0125-preview'      # 'gpt-4-1106-preview'
     temperature: float = 0.0
     logprobs: bool | None = None
     top_logprobs: int | None = Field(None, ge=0, le=5, description="The number of logprobs to return")

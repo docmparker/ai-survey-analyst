@@ -1,9 +1,8 @@
 # from instructor.function_calls import OpenAISchema
-from collections import namedtuple
 from .utils import OpenAISchema
 from .single_input_task import InputModel, SurveyTaskProtocol, CommentModel, apply_task_with_logprobs, LLMConfig
 from pydantic import Field, validate_arguments, model_validator
-from typing import Any, Type, Literal
+from typing import Any, Type, Literal, NamedTuple
 from functools import partial
 from . import batch_runner as br
 import openai.types.chat.chat_completion
@@ -65,8 +64,12 @@ class SentimentAnalysisResult(OpenAISchema):
                 next_token = val['token']
                 break
 
-        confidence = namedtuple('Confidence', ['top_token', 'next_token', 'difference'])
-        return confidence(top_token, next_token, top_logprob - next_logprob if next_logprob is not None else math.inf)
+        class Confidence(NamedTuple):
+            top_token: str
+            next_token: str
+            difference: float
+
+        return Confidence(top_token, next_token, top_logprob - next_logprob if next_logprob is not None else math.inf)
     
     @property
     def top_logprob(self) -> float:

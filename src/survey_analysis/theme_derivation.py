@@ -1,3 +1,4 @@
+from collections import Counter
 import json
 from pprint import pprint
 import random
@@ -12,8 +13,8 @@ from survey_analysis import single_input_task as sit
 
 class Theme(OpenAISchema):
     """A theme and relevant extracted quotes derived from a batch of comments"""
-    theme_title: str = Field("", description="A short name for the theme")
-    description: str = Field("", description="A description of the theme")
+    theme_title: str = Field("", description="A short name for the theme (5 words or less)")
+    description: str = Field("", description="A description of the theme (2 sentences or less)")
     citations: list[str] = Field([], description="A list of citations (exact extracted quotes) related to the theme")
 
 class DerivedThemes(OpenAISchema, InputModel):
@@ -58,9 +59,9 @@ class UpdatedThemes(OpenAISchema, InputModel):
 
 # This gets converted to the function/tool schema for combining themes, hence the non-classy name
 class combine_themes(OpenAISchema, InputModel):
-    """Consolidates a list of themes by combining very similar themes and keeping unique themes"""
+    """Consolidates a list of themes by combining very similar or identical themes and keeping unique themes"""
     reasoning: str = Field(..., description="The reasoning for combining themes")
-    updated_themes: UpdatedThemes = Field(..., description="The updated themes after combining similar themes")
+    updated_themes: list[Theme] = Field(..., description="The updated themes after combining similar themes")
 
     def is_empty(self) -> bool:
         """Returns True if all themes are empty"""
@@ -87,10 +88,13 @@ feedback comments.  You respond only with a JSON array.
 You will be provided with a batch of comments from a student course feedback survey. \
 Each comment is surrounded by the delimiter {delimiter} \
 Each original comment was in response to the question: "{self.question}". \
-Your task is to derive themes from the comments.  A theme is a short phrase that summarizes \
-a piece of feedback that is expressed by multiple students. There may be multiple themes \
-present in the comments. Examples of themes are: "Helpful Videos", "Clinical Applications", \
-and "Interactive Content".
+Your goal is to derive as many themes as you can from the comments. \
+A theme is a short phrase that summarizes \
+a piece of feedback that is expressed by multiple students. Examples of themes are: \
+"Helpful Videos", "Clinical Applications", \
+and "Interactive Content". The themes you derive should be unique (in other words, be distinct \
+from each other in terms of the feedback they represent) and comprehensive (in other words, \
+encompass ALL feedback that is expressed by two or more students).
 
 Once you have derived the themes, respond with a JSON array of theme objects. \
 Each theme object should have a 'theme_title' field (which \
@@ -144,11 +148,11 @@ async def derive_themes(comments: list[str | float | None], question: str, shuff
     task_input: CommentBatch = CommentBatch(comments=[CommentModel(comment=comment) for comment in comments])
     
     # run survey_task on task_input shuffle_passes times and combine results
-    results: list[DerivedThemes] = []
+    results: list[Theme] = []
     for i in range(shuffle_passes):
         # shuffle the comments
         print(f"shuffle pass {i}")
-        task_input.shuffle() # trying shuffling to see if order of comments help derive different themes
+        task_input.shuffle() # the themes derived vary based on the order of the comments
         task_result: DerivedThemes = await sit.apply_task(task_input=task_input, 
                                                           get_prompt=survey_task.prompt_messages, 
                                                           result_class=survey_task.result_class)
@@ -163,9 +167,21 @@ async def derive_themes(comments: list[str | float | None], question: str, shuff
 
     print(f"number of total themes across {shuffle_passes} passes: {len(results)}")
 
-    # if there was only one pass, return the result of that pass
+    # if there was only one pass, return the result of that pass wrapped in combine_themes
     if shuffle_passes == 1:
-        return results[0]
+        return combine_themes(reasoning="only one pass", updated_themes=results)
+
+    print(f"The number of unique themes by title is {len(set([theme.theme_title for theme in results]))}")
+    theme_counts = Counter([theme.theme_title for theme in results])
+    print(f"The count of themes by title is {theme_counts}")
+
+    # deduplicate the citations (we don't need an LLM to do this)
+    duplicate_citations = 0
+    for theme in results:
+        unique_citations = set(theme.citations)
+        duplicate_citations += len(theme.citations) - len(unique_citations)
+        theme.citations = list(unique_citations)
+    print(f"The total number of duplicate citations was {duplicate_citations}")
     
     reduce_task_input = DerivedThemes(themes=results)
     reduce_task = CombineThemes(survey_question=survey_task.question)
@@ -173,6 +189,16 @@ async def derive_themes(comments: list[str | float | None], question: str, shuff
     final_task_result = await sit.apply_task(task_input=reduce_task_input,
                                             get_prompt=reduce_task.prompt_messages,
                                             result_class=reduce_task.result_class)
+
+    # get rid of any duplicate themes by title
+    deduped_results = []
+    for theme in final_task_result.updated_themes:
+        if theme.theme_title not in [t.theme_title for t in deduped_results]:
+            deduped_results.append(theme)
+    final_task_result.updated_themes = deduped_results
+
+    print(f"number of themes after combining: {len(final_task_result.updated_themes)}")
+    print(f"theme titles after combining: {[theme.theme_title for theme in final_task_result.updated_themes]}") 
 
     return final_task_result
 
@@ -222,22 +248,27 @@ Record your reasoning from this step.
 
 Step 2:
 
-Next, merge and refine themes. Having identified similar themes in the previous step:
-   - Combine their citations into one list, removing any exact duplicate citations.
-   - For each merged theme, create a new, consolidated title that captures the essence of the merged theme.
-   - For each merged theme, write a comprehensive description that encompasses all aspects of the themes being merged.
+Next, merge and refine themes based on your reasoning from the previous step:
+- For each set of similar themes, merge them into one theme.
+    - Combine their citations into one list, removing any exact duplicate citations.
+    - Create a new, consolidated title that captures the essence of the merged theme.
+    - Write a comprehensive description that encompasses all aspects of the themes being merged.
+- For each unique theme that doesn't need merging, leave it as is.
 
-For each unique theme that doesn't need merging, leave it as is.
+Save the resulting updated themes from this step. Include all of the new \
+merged ones and the unique ones that didn't need merging. MAKE SURE you \
+keep ALL of the unique themes. For every theme, include the 'theme_title', \
+'description', and 'citations'.
 
-Save the updated themes from this step. Include all of the new merged ones and the ones that didn't need \
-merging. For every theme, include the 'theme_title', 'description', and 'citations'.
+Do your best. If you have done an outstanding job, you will get a $500 tip."""
 
-Step 3:
+#  If you missed combining any similar themes, return to Step 2 and repeat the process one \
+# time only, starting with the results you achieved via Step 2 so far.
+# Step 3:
 
-Review your work. Did you do an excellent job? If you missed combining any similar themes, \
-combine those before saving the final themes. As before, don't forget to remove any \
-duplicate citations in each list of citations. Do your best. If you have done an outstanding \
-job, you will get a $500 tip."""
+# Review your work. If you forgot to combine themes you had identified for merging, do that now. \
+# If you dropped any themes that weren't involved in merging, make sure to include those. \
+# As before, don't forget to remove any duplicate citations in each list of citations.
 
         user_message = f"""{format_themes(task_input)}"""
 

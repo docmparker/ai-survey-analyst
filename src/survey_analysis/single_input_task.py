@@ -1,3 +1,4 @@
+import random
 from typing import Callable
 from pydantic import BaseModel, Field, ConfigDict
 from openai import AsyncOpenAI
@@ -35,6 +36,18 @@ class CommentModel(InputModel, OpenAISchema):
     def is_empty(self) -> bool:
         """Returns True if the input is empty"""
         return not comment_has_content(self.comment)
+
+class CommentBatch(InputModel, OpenAISchema):
+    """Wraps a batch of comments. Used by tasks that take a batch of comments."""
+    comments: list[CommentModel] = Field([], description="A list of comments")
+
+    def is_empty(self) -> bool:
+        """Returns True if all comments are empty"""
+        return all([comment.is_empty() for comment in self.comments])
+
+    def shuffle(self) -> None:
+        """Shuffles the comments"""
+        random.shuffle(self.comments)
 
 
 # takes a task object and returns the messages for the prompt

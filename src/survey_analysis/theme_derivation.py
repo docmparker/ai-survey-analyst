@@ -1,9 +1,6 @@
 from collections import Counter
-import json
-from pprint import pprint
-import random
 from .utils import OpenAISchema
-from .single_input_task import SurveyTaskProtocol, InputModel, CommentModel
+from .single_input_task import SurveyTaskProtocol, InputModel, CommentModel, CommentBatch
 from pydantic import Field, validate_arguments, conint
 from typing import Type
 from survey_analysis import single_input_task as sit
@@ -25,27 +22,6 @@ class DerivedThemes(OpenAISchema, InputModel):
         """Returns True if all themes are empty"""
         return len(self.themes) == 0
 
-class CommentBatch(InputModel, OpenAISchema):
-    """Wraps a batch of comments. Used by tasks that take a batch of comments."""
-    comments: list[CommentModel] = Field([], description="A list of comments")
-
-    def is_empty(self) -> bool:
-        """Returns True if all comments are empty"""
-        return all([comment.is_empty() for comment in self.comments])
-
-    def shuffle(self) -> None:
-        """Shuffles the comments"""
-        random.shuffle(self.comments)
-
-# could make combine_themes have its field be a list of reasoning and combined_themes and let it decide
-# how many to include. If these are classes refer in the system prompt as Reasoning and CombinedThemes
-# class Reasoning(OpenAISchema, InputModel):
-#     """The reasoning for combining themes"""
-#     reasoning: str = Field(..., description="The reasoning for combining themes")
-
-#     def is_empty(self) -> bool:
-#         """Returns True if all themes are empty"""
-#         return len(self.reasoning) == 0
     
 # this is basically the same class as DerivedThemes, but with a different name and description
 # to potentially enhance the tool use based on a more descriptive schema for this task

@@ -65,21 +65,20 @@ You will be provided with a batch of comments from a student course feedback sur
 Each comment is surrounded by the delimiter {delimiter} \
 Each original comment was in response to the question: "{self.question}". \
 Your goal is to derive as many themes as you can from the comments. \
-A theme is a short phrase that summarizes \
-a piece of feedback that is expressed by multiple students. Examples of themes are: \
-"Helpful Videos", "Clinical Applications", \
-and "Interactive Content". The themes you derive should be unique (in other words, be distinct \
-from each other in terms of the feedback they represent) and comprehensive (in other words, \
-encompass ALL feedback that is expressed by two or more students).
+A theme is a short phrase that summarizes a piece of feedback that is expressed by multiple \
+students. Examples of themes are: "Helpful Videos", "Clinical Applications", and "Interactive Content". \
+The themes you derive should be unique (in other words, be distinct from each other in terms \
+of the feedback they represent) and comprehensive (in other words, encompass ALL feedback that \
+is expressed by two or more students).
 
 Once you have derived the themes, respond with a JSON array of theme objects. \
-Each theme object should have a 'theme_title' field (which \
-gives a short name for the theme in 5 words or less), a 'description' field which describes the \
-theme in two sentences or less, and a 'citations' \
-field, which is an array of 3 exact quotes from distinct survey comments \
-supporting this theme. Each quote should have enough context to be understood. \
-Do not add or alter words in the quotes under any circumstances. If there are \
-less than 3 quotes, then include as many as you can."""
+Each theme object should have a 'theme_title' field (which gives a short name for \
+the theme in 5 words or less), a 'description' field which describes the \
+theme in two sentences or less, and a 'citations' field, which is an array of \
+3 exact quotes from distinct survey comments supporting this theme. Each quote \
+should have enough context to be understood. Do not add or alter words in the \
+quotes under any circumstances. If there are less than 3 quotes, then include \
+as many as you can."""
 
         comment_list_del = "\n".join([f"{delimiter}{comment.comment}{delimiter}" 
                                       for comment in task_input.comments 

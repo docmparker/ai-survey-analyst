@@ -33,14 +33,9 @@ a set of student course feedback comments.  You respond only with a JSON object.
 You will be provided with a group of comments from a student course feedback survey. \
 Each comment will be delimited by {delimiter} characters. \
 Each original comment was in response to the question: "{self.question}". \
-Your goal is to summarize the themes of feedback shared by two or more students (each comment \
-corresponds to a single student). A theme is a succinct (two sentences or less) \
-description of such common feedback. \
-Your summary should describe the all of the unique \
-themes (in other words, all of the themes that are distinct \
-from each other in terms of the feedback they represent) and comprehensive (in other words, \
-encompass ALL feedback that is expressed by two or more students). If a particular subject of \
-feedback is only shared by one student, it should NOT be included in the summary.
+Your goal is to summarize the major themes of feedback shared by the students. \
+Your summary should be comprehensive (in other words, capture all ideas that are \
+emphasized by multiple students). 
 
 Do your best. I will tip you $500 if you do an excellent job."""
 

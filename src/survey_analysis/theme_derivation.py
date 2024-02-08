@@ -4,6 +4,8 @@ from .single_input_task import SurveyTaskProtocol, InputModel, CommentModel, Com
 from pydantic import Field, validate_arguments, conint
 from typing import Type
 from survey_analysis import single_input_task as sit
+from functools import partial
+import tiktoken
 
 
 # Create the models
@@ -64,7 +66,7 @@ feedback comments.  You respond only with a JSON array.
 You will be provided with a batch of comments from a student course feedback survey. \
 Each comment is surrounded by the delimiter {delimiter} \
 Each original comment was in response to the question: "{self.question}". \
-Your goal is to derive as many themes as you can from the comments. \
+Your goal is to derive as many themes as possible from the comments. \
 A theme is a short phrase that summarizes a piece of feedback that is expressed by multiple \
 students. Examples of themes are: "Helpful Videos", "Clinical Applications", and "Interactive Content". \
 The themes you derive should be unique (in other words, be distinct from each other in terms \
@@ -105,6 +107,8 @@ async def derive_themes(comments: list[str | float | None], question: str, shuff
     """Derives themes from a batch of comments, coordinating
     multiple shuffled passes to avoid LLM positional bias and
     then combining the results of each pass into a single result.
+    Each pass is progressively combined with the combined results of the previous passes, 
+    in an iterative fashion to keep tokens and task complexity relatively low.
 
     Args: 
         comments: A list of comments
@@ -119,63 +123,106 @@ async def derive_themes(comments: list[str | float | None], question: str, shuff
     ```
     """
 
-    survey_task: DeriveThemes = DeriveThemes(question=question)
-    task_input: CommentBatch = CommentBatch(comments=[CommentModel(comment=comment) for comment in comments])
-    
-    # run survey_task on task_input shuffle_passes times and combine results
-    results: list[Theme] = []
-    for i in range(shuffle_passes):
-        # shuffle the comments
-        print(f"shuffle pass {i}")
-        task_input.shuffle() # the themes derived vary based on the order of the comments
-        task_result: DerivedThemes = await sit.apply_task(task_input=task_input, 
-                                                          get_prompt=survey_task.prompt_messages, 
-                                                          result_class=survey_task.result_class)
-        # show the theme titles and descriptions
-        for theme in task_result.themes:
+    # run derive_themes_task on task_input shuffle_passes times, combining the results each time
+    # combine results of pass 1 and 2, then combine pass 3 with that, etc.
+
+    enc = tiktoken.encoding_for_model('gpt-4')
+    # some helper functions
+    def deduplicate_citations(themes: list[Theme]) -> list[Theme]:
+        """Deduplicates the citations in a list of themes"""
+        duplicate_citations = 0
+        for theme in themes:
+            unique_citations = set(theme.citations)
+            duplicate_citations += len(theme.citations) - len(unique_citations)
+            theme.citations = list(unique_citations)
+        print(f"The total number of duplicate citations was {duplicate_citations}")
+        return themes
+
+    def deduplicate_themes_by_title(themes: list[Theme]) -> list[Theme]:
+        """Deduplicates themes by title"""
+        deduped_results = []
+        for theme in themes:
+            if theme.theme_title not in [t.theme_title for t in deduped_results]:
+                deduped_results.append(theme)
+        return deduped_results
+
+    def show_themes(themes: list[Theme]) -> None:
+        """Prints the titles and descriptions of a list of themes"""
+        for theme in themes:
             print(f"title: {theme.theme_title}")
             print(f"description: {theme.description}")
-            print(f"citations: {theme.citations}")
             print()
 
-        results.extend(task_result.themes)
+    running_results = []
 
-    print(f"number of total themes across {shuffle_passes} passes: {len(results)}")
+    # first run
+    print("pass 1")
+    derive_themes_task: DeriveThemes = DeriveThemes(question=question)
+    comments_wrapped = [CommentModel(comment=comment) for comment in comments]
+    task_input: CommentBatch = CommentBatch(comments=comments_wrapped)
+    derive_partial = partial(sit.apply_task, 
+                             get_prompt=derive_themes_task.prompt_messages, 
+                             result_class=derive_themes_task.result_class)
+    task_result: DerivedThemes = await derive_partial(task_input=task_input) 
+    running_results.extend(task_result.themes)
+
+    show_themes(running_results)
 
     # if there was only one pass, return the result of that pass wrapped in combine_themes
     if shuffle_passes == 1:
-        return combine_themes(reasoning="only one pass", updated_themes=results)
+        return combine_themes(reasoning="only one pass", updated_themes=running_results)
 
-    print(f"The number of unique themes by title is {len(set([theme.theme_title for theme in results]))}")
-    theme_counts = Counter([theme.theme_title for theme in results])
-    print(f"The count of themes by title is {theme_counts}")
+    # do the remaining runs, combining progressively along the way
+    for i in range(1, shuffle_passes):
+        # shuffle the comments
+        print(f"pass {i+1}")
+        task_input.shuffle() # the themes derived vary based on the order of the comments
+        task_result: DerivedThemes = await derive_partial(task_input=task_input)
+                                                        #   get_prompt=derive_themes_task.prompt_messages, 
+                                                        #   result_class=derive_themes_task.result_class)
 
-    # deduplicate the citations (we don't need an LLM to do this)
-    duplicate_citations = 0
-    for theme in results:
-        unique_citations = set(theme.citations)
-        duplicate_citations += len(theme.citations) - len(unique_citations)
-        theme.citations = list(unique_citations)
-    print(f"The total number of duplicate citations was {duplicate_citations}")
+        show_themes(task_result.themes)
+
+        # add to the running results and then run a combination step
+        running_results.extend(task_result.themes)
+
+        # put out some diagnostics
+        print(f"number of total themes across {i+1} passes before combining: {len(running_results)}")
+        print(f"The number of unique themes by title is {len(set([theme.theme_title for theme in running_results]))}")
+        theme_counts = Counter([theme.theme_title for theme in running_results])
+        print(f"The count of themes by title is {theme_counts}")
+
+        # now combine the results to distill them down to unique themes
+
+        # this needs to change to put together the task_result.themes with running_results BEFORE updating running_results
+        # deduped_results = deduplicate_citations(running_results)
+        # deduped_results = deduplicate_themes_by_title(deduped_results)
+
+        # could just continue here if i == 0 and shuffle_passes != 1
     
-    reduce_task_input = DerivedThemes(themes=results)
-    reduce_task = CombineThemes(survey_question=survey_task.question)
-    print("\ncombining results\n")
-    final_task_result = await sit.apply_task(task_input=reduce_task_input,
-                                            get_prompt=reduce_task.prompt_messages,
-                                            result_class=reduce_task.result_class)
+        print(f"\ncombining results {i+1} with {i}\n")
 
-    # get rid of any duplicate themes by title
-    deduped_results = []
-    for theme in final_task_result.updated_themes:
-        if theme.theme_title not in [t.theme_title for t in deduped_results]:
-            deduped_results.append(theme)
-    final_task_result.updated_themes = deduped_results
+        reduce_task_input = DerivedThemes(themes=running_results)
+        reduce_task = CombineThemes(survey_question=question)
 
-    print(f"number of themes after combining: {len(final_task_result.updated_themes)}")
-    print(f"theme titles after combining: {[theme.theme_title for theme in final_task_result.updated_themes]}") 
+        # do a token count on the prompt messages
+        messages = reduce_task.prompt_messages(reduce_task_input)
+        token_count = len(enc.encode(messages[0]['content'] + messages[1]['content']))
+        print(f"token count for prompt messages: {token_count}")
 
-    return final_task_result
+        combined_result = await sit.apply_task(task_input=reduce_task_input,
+                                                get_prompt=reduce_task.prompt_messages,
+                                                result_class=reduce_task.result_class)
+
+        running_results = combined_result.updated_themes
+        # put out some diagnostics
+        print(f"number of themes after combining: {len(running_results)}")
+        print(f"theme titles after combining: {[theme.theme_title for theme in running_results]}") 
+
+    # only dedupe by titles at the very end
+    combined_result.updated_themes = deduplicate_themes_by_title(combined_result.updated_themes)
+
+    return combined_result
 
 
 class CombineThemes(SurveyTaskProtocol):
@@ -215,7 +262,7 @@ students). These themes were derived from survey responses to the question: "{se
 Step 1:
 
 First, identify similar themes. Review each theme and compare with others to find content \
-similarities. Look for themes with overlapping or complementary content, even if their titles \
+similarities. Look for themes with substantially overlapping content, even if their titles \
 are not identical. For instance, 'Expert Instruction' and 'Expert Instructors' might \
 cover similar content from different angles and should be considered for merging. Similarly, \
 'Interactive Learning' and 'Hands-On Modules' may also overlap significantly in content. \
@@ -237,6 +284,7 @@ keep ALL of the unique themes. For every theme, include the 'theme_title', \
 
 Do your best. If you have done an outstanding job, you will get a $500 tip."""
 
+# overlapping or complementary --> substantially overlapping
 #  If you missed combining any similar themes, return to Step 2 and repeat the process one \
 # time only, starting with the results you achieved via Step 2 so far.
 # Step 3:

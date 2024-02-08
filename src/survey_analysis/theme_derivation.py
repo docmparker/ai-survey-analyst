@@ -26,13 +26,13 @@ class DerivedThemes(OpenAISchema, InputModel):
     
 # this is basically the same class as DerivedThemes, but with a different name and description
 # to potentially enhance the tool use based on a more descriptive schema for this task
-class UpdatedThemes(OpenAISchema, InputModel):
-    """Updated themes after combining similar themes, including merged themes and themes that didn't need merging"""
-    themes: list[Theme] = Field([], description="A list of themes")
+# class UpdatedThemes(OpenAISchema, InputModel):
+#     """Updated themes after combining similar themes, including merged themes and themes that didn't need merging"""
+#     themes: list[Theme] = Field([], description="A list of themes")
 
-    def is_empty(self) -> bool:
-        """Returns True if all themes are empty"""
-        return len(self.themes) == 0
+#     def is_empty(self) -> bool:
+#         """Returns True if all themes are empty"""
+#         return len(self.themes) == 0
 
 # This gets converted to the function/tool schema for combining themes, hence the non-classy name
 class combine_themes(OpenAISchema, InputModel):
@@ -98,6 +98,18 @@ as many as you can."""
     def result_class(self) -> Type[OpenAISchema]:
         """Returns the result class for theme derivation"""
         return DerivedThemes
+
+
+@validate_arguments
+async def combine_themes_(themes: list[Theme], question: str) -> combine_themes:
+    """Convenience method for combining themes derived from a batch of comments"""
+    task_input = DerivedThemes(themes=themes)
+    reduce_task = CombineThemes(survey_question=question)
+    combined_result = await sit.apply_task(task_input=task_input,
+                                            get_prompt=reduce_task.prompt_messages,
+                                            result_class=reduce_task.result_class)
+
+    return combined_result
 
 
 @validate_arguments
@@ -190,15 +202,8 @@ async def derive_themes(comments: list[str | float | None], question: str, shuff
         print(f"The count of themes by title is {theme_counts}")
 
         # now combine the results to distill them down to unique themes
-
         print(f"\ncombining results {i+1} with {i}\n")
-
-        reduce_task_input = DerivedThemes(themes=running_results)
-        reduce_task = CombineThemes(survey_question=question)
-
-        combined_result = await sit.apply_task(task_input=reduce_task_input,
-                                                get_prompt=reduce_task.prompt_messages,
-                                                result_class=reduce_task.result_class)
+        combined_result = await combine_themes_(themes=running_results, question=question)
 
         running_results = combined_result.updated_themes
         # put out some diagnostics

@@ -273,8 +273,9 @@ Next, merge and refine themes based on your reasoning from the previous step:
 
 Save the resulting updated themes from this step. Include all of the new \
 merged ones and the unique ones that didn't need merging. MAKE SURE you \
-keep ALL of the unique themes. For every theme, include the 'theme_title', \
-'description', and 'citations'.
+keep ALL of the unique themes. You should not end up with more themes than you \
+started with, given that you are only merging or keeping themes, not splitting themes. \
+For every theme, include the 'theme_title', 'description', and 'citations'.
 
 Do your best. If you have done an outstanding job, you will get a $500 tip."""
 

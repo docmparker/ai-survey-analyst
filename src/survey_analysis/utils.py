@@ -1,13 +1,18 @@
 from pydantic import BaseModel
-
+import tiktoken
 
 def comment_has_content(comment: str) -> bool:
     """Check if a comment has content"""
     none_equivalents = ['n/a', None, 'none', 'null', '', 'na', 'nan']
     return False if ((not comment) or (comment.lower() in none_equivalents)) else True
 
+def count_tokens(text: str) -> int:
+    """Count the number of tokens in a string"""
+    enc = tiktoken.encoding_for_model('gpt-4') # the tokenizer is the same for gpt-3.5 and gpt-4
+    return len(enc.encode(text))
 
 class OpenAISchema(BaseModel):
+    """This goes from a pydantic model to an OpenAI function/tool schema"""
     @classmethod
     def openai_schema(cls):
         assert cls.__doc__, f"{cls.__name__} is missing a docstring."

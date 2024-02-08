@@ -5,7 +5,7 @@ from pydantic import Field, validate_arguments, conint
 from typing import Type
 from survey_analysis import single_input_task as sit
 from functools import partial
-import tiktoken
+# import tiktoken
 
 
 # Create the models
@@ -100,8 +100,7 @@ as many as you can."""
         """Returns the result class for theme derivation"""
         return DerivedThemes
 
-# turn this into a pipeline
-# async def derive_themes(task_input: CommentBatch, survey_task: DeriveThemes, shuffle_passes=3) -> ThemeConsolidation:
+
 @validate_arguments
 async def derive_themes(comments: list[str | float | None], question: str, shuffle_passes: conint(ge=1, le=10) = 3) -> combine_themes:
     """Derives themes from a batch of comments, coordinating
@@ -126,7 +125,7 @@ async def derive_themes(comments: list[str | float | None], question: str, shuff
     # run derive_themes_task on task_input shuffle_passes times, combining the results each time
     # combine results of pass 1 and 2, then combine pass 3 with that, etc.
 
-    enc = tiktoken.encoding_for_model('gpt-4')
+    # enc = tiktoken.encoding_for_model('gpt-4')
     # some helper functions
     def deduplicate_citations(themes: list[Theme]) -> list[Theme]:
         """Deduplicates the citations in a list of themes"""
@@ -200,9 +199,9 @@ async def derive_themes(comments: list[str | float | None], question: str, shuff
         reduce_task = CombineThemes(survey_question=question)
 
         # do a token count on the prompt messages
-        messages = reduce_task.prompt_messages(reduce_task_input)
-        token_count = len(enc.encode(messages[0]['content'] + messages[1]['content']))
-        print(f"token count for prompt messages: {token_count}")
+        # messages = reduce_task.prompt_messages(reduce_task_input)
+        # token_count = len(enc.encode(messages[0]['content'] + messages[1]['content']))
+        # print(f"token count for prompt messages: {token_count}")
 
         combined_result = await sit.apply_task(task_input=reduce_task_input,
                                                 get_prompt=reduce_task.prompt_messages,

@@ -194,12 +194,6 @@ async def derive_themes(comments: list[str | float | None], question: str, shuff
 
         # now combine the results to distill them down to unique themes
 
-        # this needs to change to put together the task_result.themes with running_results BEFORE updating running_results
-        # deduped_results = deduplicate_citations(running_results)
-        # deduped_results = deduplicate_themes_by_title(deduped_results)
-
-        # could just continue here if i == 0 and shuffle_passes != 1
-    
         print(f"\ncombining results {i+1} with {i}\n")
 
         reduce_task_input = DerivedThemes(themes=running_results)

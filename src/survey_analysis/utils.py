@@ -11,6 +11,23 @@ def count_tokens(text: str) -> int:
     enc = tiktoken.encoding_for_model('gpt-4') # the tokenizer is the same for gpt-3.5 and gpt-4
     return len(enc.encode(text))
 
+def count_tokens_for_messages(messages, model="gpt-4"):
+    """Return the number of tokens used by a list of messages."""
+    try:
+        enc = tiktoken.encoding_for_model(model)
+    except KeyError:
+        print("Warning: model not found. Using cl100k_base encoding.")
+        enc = tiktoken.get_encoding("cl100k_base")
+
+    tokens_per_message = 3  # <|start|> <|name|> <|message|>
+    num_tokens = 0
+    for message in messages:
+        num_tokens += tokens_per_message
+        for value in message.values():
+            num_tokens += len(enc.encode(value))
+    num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
+    return num_tokens
+
 class OpenAISchema(BaseModel):
     """This goes from a pydantic model to an OpenAI function/tool schema"""
     @classmethod

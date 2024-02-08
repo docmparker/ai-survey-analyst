@@ -7,7 +7,7 @@ from .utils import comment_has_content, OpenAISchema
 from abc import ABC, abstractmethod
 from typing import Type
 
-aclient = AsyncOpenAI(timeout=httpx.Timeout(timeout=120.0))
+aclient = AsyncOpenAI(timeout=httpx.Timeout(timeout=240.0))
 
 class LLMConfig(BaseModel):
     """Model class for LLM configuration"""

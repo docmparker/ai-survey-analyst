@@ -258,15 +258,15 @@ Step 1:
 First, identify similar themes. Review each theme and compare with others to find content \
 similarities. Look for themes with substantially overlapping content, even if their titles \
 are not identical. For instance, 'Expert Instruction' and 'Expert Instructors' might \
-cover similar content from different angles and should be considered for merging. Similarly, \
-'Interactive Learning' and 'Hands-On Modules' may also overlap significantly in content. \
+cover similar content from different angles and should be considered for merging. Titles \
+that are identical or have overlapping words are strong candidates for merging. \
 Record your reasoning from this step.
 
 Step 2:
 
 Next, merge and refine themes based on your reasoning from the previous step:
 - For each set of similar themes, merge them into one theme.
-    - Combine their citations into one list, removing any exact duplicate citations.
+    - Combine their citations into one list.
     - Create a new, consolidated title that captures the essence of the merged theme.
     - Write a comprehensive description that encompasses all aspects of the themes being merged.
 - For each unique theme that doesn't need merging, leave it as is.
@@ -275,18 +275,10 @@ Save the resulting updated themes from this step. Include all of the new \
 merged ones and the unique ones that didn't need merging. MAKE SURE you \
 keep ALL of the unique themes. You should not end up with more themes than you \
 started with, given that you are only merging or keeping themes, not splitting themes. \
-For every theme, include the 'theme_title', 'description', and 'citations'.
+For every theme, include the 'theme_title' and 'description'. You should return an empty \
+list for citations since those won't be needed for the next step.
 
 Do your best. If you have done an outstanding job, you will get a $500 tip."""
-
-# overlapping or complementary --> substantially overlapping
-#  If you missed combining any similar themes, return to Step 2 and repeat the process one \
-# time only, starting with the results you achieved via Step 2 so far.
-# Step 3:
-
-# Review your work. If you forgot to combine themes you had identified for merging, do that now. \
-# If you dropped any themes that weren't involved in merging, make sure to include those. \
-# As before, don't forget to remove any duplicate citations in each list of citations.
 
         user_message = f"""{format_themes(task_input)}"""
 

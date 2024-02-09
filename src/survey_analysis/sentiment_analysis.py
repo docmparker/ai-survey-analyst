@@ -54,6 +54,10 @@ class SentimentAnalysisResult(OpenAISchema):
     @property
     def classification_confidence(self) -> tuple[str, float]:
         """Calculate confidence based on top 2 distinct logprob diff within positive, negative, neutral rankings"""
+        if not self.sentiment_logprobs:
+            # if the comment had no content, there will be no logprobs
+            return None
+
         top_token, top_logprob = self.sentiment_logprobs[0]['token'], self.sentiment_logprobs[0]['logprob']
 
         next_logprob = None
@@ -74,6 +78,10 @@ class SentimentAnalysisResult(OpenAISchema):
     @property
     def top_logprob(self) -> float:
         """Returns the logprob for the top sentiment token"""
+        if not self.sentiment_logprobs:
+            # if the comment had no content, there will be no logprobs
+            raise ValueError("The comment had no content")
+
         return self.sentiment_logprobs[0]['logprob']
 
 
@@ -125,7 +133,7 @@ Do your best. I will tip you $500 if you do an excellent job."""
     
 
 @validate_arguments
-async def classify_sentiment(*, comments: list[str | None], question: str) -> list[OpenAISchema]:
+async def classify_sentiment(*, comments: list[str | float | None], question: str) -> list[OpenAISchema]:
     """Classify the sentiment for each of a list of comments, based on a particular question 
     
     Returns a list of SentimentAnalysisResult objects

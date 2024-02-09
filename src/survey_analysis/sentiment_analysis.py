@@ -150,14 +150,15 @@ async def classify_sentiment(*, comments: list[str | float | None], question: st
     return sentiment_results
 
 
-def sort_by_confidence(comments: list[str], sentiment_results: list[SentimentAnalysisResult]) -> list[tuple[str, SentimentAnalysisResult]]:
+def sort_by_confidence(comments: list[str | float | None], sentiment_results: list[SentimentAnalysisResult]) -> list[tuple[str, SentimentAnalysisResult]]:
     """Sort the comments and sentiment results by confidence, while keeping track of which comment goes with which result.
     The confidence is calculated as the difference between the top and next highest logprob for the sentiment token, with the 
     next highest logprob being the next highest distinct logprob ('positive' and 'Positive' are not distinct, for example).
     
     The results are sorted within each sentiment category, so that the top confidence for each sentiment category is at the top.
     """
-    pairs = list(zip(comments, sentiment_results))
+    # ignore the comments that had no content
+    pairs = [(comment, sentiment_result) for comment, sentiment_result in zip(comments, sentiment_results) if sentiment_result.sentiment_logprobs]
 
     # Sort the pairs based on the result
     pairs.sort(key=lambda pair: (pair[1].sentiment_logprobs[0]['token'], pair[1].classification_confidence.difference), reverse=True)

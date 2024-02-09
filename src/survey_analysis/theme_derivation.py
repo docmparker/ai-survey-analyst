@@ -102,7 +102,13 @@ as many as you can."""
 
 @validate_arguments
 async def combine_themes_(themes: list[Theme], question: str) -> combine_themes:
-    """Convenience method for combining themes derived from a batch of comments"""
+    """Convenience method for combining themes derived from a batch of comments
+    
+    question refers to the question that the comments were in response to.
+    themes are the themes to combine, potentially derived from multiple passes of derive_themes,
+    or from single passes over multiple batches of comments.
+    """
+
     task_input = DerivedThemes(themes=themes)
     reduce_task = CombineThemes(survey_question=question)
     combined_result = await sit.apply_task(task_input=task_input,

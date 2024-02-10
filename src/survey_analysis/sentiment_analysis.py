@@ -157,7 +157,14 @@ def sort_by_confidence(comments: list[str | float | None], sentiment_results: li
     The confidence is calculated as the difference between the top and next highest logprob for the sentiment token, with the 
     next highest logprob being the next highest distinct logprob ('positive' and 'Positive' are not distinct, for example).
     
-    The results are sorted within each sentiment category, so that the top confidence for each sentiment category is at the top.
+    The results are sorted to largely go from most positive to most negative based on criteria as follows:
+    - first sort by token (positive, neutral, negative)
+    - then sort differently within each token
+        - for positive, sort by difference, then by top logprob, reversed so goes from top difference to lowest, with logprob breaking ties
+        - for negative, sort by difference, then by top logprob, so it goes from least negative to most negative, with logprob breaking ties
+        - neutral is trickier, given that we may have neutral, neutral-negative, and neutral-positive, depending on what the next ranked
+            different token from neutral is in the top_logprobs. We sort from most positive neutrals to most negative neutrals,
+            with neutral neutrals being sorted by difference and then by top logprob.
 
     For ties (like ones that have math.inf as the difference), the sort is by the top logprob.
     """
@@ -166,12 +173,64 @@ def sort_by_confidence(comments: list[str | float | None], sentiment_results: li
 
     # Sort the pairs based on the result
     # sort by token, then by difference, then by top logprob
-    pairs.sort(key=lambda pair: (pair[1].sentiment_logprobs[0]['token'], 
-                                 pair[1].classification_confidence.difference,
-                                 pair[1].top_logprob), 
-                                 reverse=True)
+    # pairs.sort(key=lambda pair: (pair[1].sentiment_logprobs[0]['token'], 
+    #                              pair[1].classification_confidence.difference,
+    #                              pair[1].top_logprob), 
+    #                              reverse=True)
+
+    # first sort by token
+    def by_token(pair):
+        token = pair[1].sentiment_logprobs[0]['token']
+        return 1 if token == 'positive' else 2 if token == 'neutral' else 3
+
+    def by_custom_criteria(pair):
+        token = pair[1].sentiment_logprobs[0]['token']
+        if token == 'positive':
+            return (-pair[1].classification_confidence.difference, -pair[1].top_logprob)
+        elif token == 'negative':
+            return (pair[1].classification_confidence.difference, pair[1].top_logprob)
+        elif token == 'neutral':
+            next_token = pair[1].classification_confidence.next_token or 'no_value'
+            if next_token.lower().strip()[:5] == 'posit':
+                # if the next token is positive, then the highest difference and higher logprob is more neutral
+                # so go from least neutral (more positive) to more neutral (less positive)
+                return (1, pair[1].classification_confidence.difference, pair[1].top_logprob)
+            elif next_token.lower().strip() == 'negative':
+                # if the next token is negative, then the highest difference and higher logprob is more neutral
+                # so go from more neutral (less negative) to least neutral (more negative)
+                return (4, -pair[1].classification_confidence.difference, -pair[1].top_logprob)
+            else:
+                # the next token is neutral or no_value, so the order is not terribly important since
+                # they are all presumably pretty neutral by the model's estimation
+                return (2, pair[1].classification_confidence.difference, pair[1].top_logprob)
+        else:
+            raise ValueError(f"Unknown token: {token}")
+
+    # relying on stable sort to keep the custom criteria sort within the token sort
+    pairs.sort(key=by_custom_criteria)
+    pairs.sort(key=by_token)
 
     return pairs
+
+def sentiment_category_for_color_coding(sentiment_result: SentimentAnalysisResult) -> str:
+    """Return the sentiment category for color coding"""
+    if not sentiment_result.sentiment_logprobs:
+        return 'no_content'
+    elif sentiment_result.sentiment == 'positive':
+        return 'positive'
+    elif sentiment_result.sentiment == 'negative':
+        return 'negative'
+    elif sentiment_result.sentiment == 'neutral':
+        next_token = sentiment_result.classification_confidence.next_token or 'no_value'
+        if next_token.lower().strip()[:5] == 'posit':
+            return 'neutral-positive'
+        elif next_token.lower().strip() == 'negative':
+            return 'neutral-negative'
+        else:
+            return 'neutral'
+    else:
+        return 'no_content'
+
 
 def sort_by_top_logprob(comments: list[str], sentiment_results: list[SentimentAnalysisResult]) -> list[tuple[str, SentimentAnalysisResult]]:
     """Sort the comments and sentiment results by top logprob, while keeping track of which comment goes with which result.

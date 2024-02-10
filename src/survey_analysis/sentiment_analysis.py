@@ -54,6 +54,7 @@ class SentimentAnalysisResult(OpenAISchema):
     @property
     def classification_confidence(self) -> tuple[str, float]:
         """Calculate confidence based on top 2 distinct logprob diff within positive, negative, neutral rankings"""
+
         if not self.sentiment_logprobs:
             # if the comment had no content, there will be no logprobs
             return None
@@ -63,7 +64,8 @@ class SentimentAnalysisResult(OpenAISchema):
         next_logprob = None
         next_token = None
         for i, val in enumerate(self.sentiment_logprobs, start=1):
-            if top_token.lower() != val['token'].lower():
+            # allow for 'positive' and 'Positive' and 'posit' and ' positive' to be considered the same
+            if top_token.lower().strip()[:5] != val['token'].lower().strip()[:5]:
                 next_logprob = val['logprob']
                 next_token = val['token']
                 break
@@ -156,12 +158,18 @@ def sort_by_confidence(comments: list[str | float | None], sentiment_results: li
     next highest logprob being the next highest distinct logprob ('positive' and 'Positive' are not distinct, for example).
     
     The results are sorted within each sentiment category, so that the top confidence for each sentiment category is at the top.
+
+    For ties (like ones that have math.inf as the difference), the sort is by the top logprob.
     """
     # ignore the comments that had no content
     pairs = [(comment, sentiment_result) for comment, sentiment_result in zip(comments, sentiment_results) if sentiment_result.sentiment_logprobs]
 
     # Sort the pairs based on the result
-    pairs.sort(key=lambda pair: (pair[1].sentiment_logprobs[0]['token'], pair[1].classification_confidence.difference), reverse=True)
+    # sort by token, then by difference, then by top logprob
+    pairs.sort(key=lambda pair: (pair[1].sentiment_logprobs[0]['token'], 
+                                 pair[1].classification_confidence.difference,
+                                 pair[1].top_logprob), 
+                                 reverse=True)
 
     return pairs
 
@@ -171,7 +179,8 @@ def sort_by_top_logprob(comments: list[str], sentiment_results: list[SentimentAn
     The results are sorted within each sentiment category, so that the top logprob for each sentiment category is at the top.
     """
     
-    pairs = list(zip(comments, sentiment_results))
+    # ignore the comments that had no content
+    pairs = [(comment, sentiment_result) for comment, sentiment_result in zip(comments, sentiment_results) if sentiment_result.sentiment_logprobs]
 
     # Sort the pairs based on the result
     pairs.sort(key=lambda pair: (pair[1].sentiment_logprobs[0]['token'], pair[1].top_logprob), reverse=True)

@@ -1,11 +1,11 @@
 from enum import Enum
-from pydantic import Field, BaseModel, ConfigDict, validate_arguments
+from pydantic import Field, ConfigDict, validate_arguments
 from pydantic.main import create_model
-# from instructor.function_calls import OpenAISchema
 from functools import partial
 from .utils import OpenAISchema
 import yaml
-from .single_input_task import SurveyTaskProtocol, InputModel, CommentModel, apply_task
+from .models_common import SurveyTaskProtocol, InputModel, CommentModel
+from .single_input_task import apply_task
 from . import batch_runner as br
 from typing import Type
 

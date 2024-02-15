@@ -129,7 +129,8 @@ async def derive_themes(comments: list[str | float | None], question: str, shuff
     Args: 
         comments: A list of comments
         question: The survey question that the comments are in response to
-        shuffle_passes: The number of times to shuffle the comments and derive themes (default 3
+        shuffle_passes: The number of times to shuffle the comments and derive themes (default 3, 
+                            minimum 1, maximum 10)
     
     Example usage:
     ```

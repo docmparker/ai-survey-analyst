@@ -1,6 +1,6 @@
 from collections import Counter
 from .utils import OpenAISchema
-from .single_input_task import SurveyTaskProtocol, InputModel, CommentModel, CommentBatch
+from .models_common import SurveyTaskProtocol, InputModel, CommentModel, CommentBatch
 from pydantic import Field, validate_arguments, conint
 from typing import Type
 from survey_analysis import single_input_task as sit

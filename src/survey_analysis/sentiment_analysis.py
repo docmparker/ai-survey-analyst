@@ -1,17 +1,15 @@
-# from instructor.function_calls import OpenAISchema
 from .utils import OpenAISchema
-from .single_input_task import InputModel, SurveyTaskProtocol, CommentModel, apply_task_with_logprobs, LLMConfig
-from pydantic import Field, validate_arguments
+from .models_common import InputModel, SurveyTaskProtocol, CommentModel, LLMConfig
+from .single_input_task import apply_task_with_logprobs
+from pydantic import Field, validate_arguments, computed_field
 from typing import Any, Type, Literal, NamedTuple
-from functools import partial
+from functools import partial, cached_property
 from . import batch_runner as br
 import openai.types.chat.chat_completion
 import numpy as np
 import math
 
 
-# Create the model - here we do it outside the class so it can also be used elsewhere if desired
-# without instantiating the class
 class SentimentAnalysisResult(OpenAISchema):
     """Store the sentiment and reasoning for a survey comment"""
     reasoning: str = Field("The comment had no content", description="The reasoning for the sentiment assignment")
@@ -85,6 +83,34 @@ class SentimentAnalysisResult(OpenAISchema):
             raise ValueError("The comment had no content")
 
         return self.sentiment_logprobs[0]['logprob']
+
+    @property
+    def fine_grained_sentiment_category(self) -> str:
+        """Return the sentiment category at a finer-grained level based on the logprobs.
+        This basically keeps postive and negative but divides neutral into neutral-positive,
+        neutral-negative, and neutral based on the next highest differing sentiment logprob.
+        This is useful for color coding the sentiment categories, for example. 
+        
+        The returned categories are: positive, neutral, negative, neutral-positive, 
+        neutral-negative, no_content.
+        """
+
+        if not self.sentiment_logprobs:
+            return 'no_content'
+        elif self.sentiment == 'positive':
+            return 'positive'
+        elif self.sentiment == 'negative':
+            return 'negative'
+        elif self.sentiment == 'neutral':
+            next_token = self.classification_confidence.next_token or 'no_value'
+            if next_token.lower().strip()[:5] == 'posit':
+                return 'neutral-positive'
+            elif next_token.lower().strip() == 'negative':
+                return 'neutral-negative'
+            else:
+                return 'neutral'
+        else:
+            return 'no_content'
 
 
 class SentimentAnalysis(SurveyTaskProtocol):
@@ -211,26 +237,6 @@ def sort_by_confidence(comments: list[str | float | None], sentiment_results: li
     pairs.sort(key=by_token)
 
     return pairs
-
-def sentiment_category_for_color_coding(sentiment_result: SentimentAnalysisResult) -> str:
-    """Return the sentiment category for color coding"""
-    if not sentiment_result.sentiment_logprobs:
-        return 'no_content'
-    elif sentiment_result.sentiment == 'positive':
-        return 'positive'
-    elif sentiment_result.sentiment == 'negative':
-        return 'negative'
-    elif sentiment_result.sentiment == 'neutral':
-        next_token = sentiment_result.classification_confidence.next_token or 'no_value'
-        if next_token.lower().strip()[:5] == 'posit':
-            return 'neutral-positive'
-        elif next_token.lower().strip() == 'negative':
-            return 'neutral-negative'
-        else:
-            return 'neutral'
-    else:
-        return 'no_content'
-
 
 def sort_by_top_logprob(comments: list[str], sentiment_results: list[SentimentAnalysisResult]) -> list[tuple[str, SentimentAnalysisResult]]:
     """Sort the comments and sentiment results by top logprob, while keeping track of which comment goes with which result.

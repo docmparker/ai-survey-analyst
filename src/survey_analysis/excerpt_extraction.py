@@ -1,7 +1,7 @@
-# from instructor.function_calls import OpenAISchema
 from .utils import OpenAISchema
-from .single_input_task import InputModel, SurveyTaskProtocol, CommentModel, apply_task
-from pydantic import BaseModel, Field, validate_arguments
+from .models_common import InputModel, SurveyTaskProtocol, CommentModel
+from .single_input_task import apply_task
+from pydantic import Field, validate_arguments
 from typing import Type
 from functools import partial
 from . import batch_runner as br

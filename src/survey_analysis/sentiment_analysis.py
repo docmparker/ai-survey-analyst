@@ -1,7 +1,7 @@
 from .utils import OpenAISchema
 from .models_common import InputModel, SurveyTaskProtocol, CommentModel, LLMConfig
 from .single_input_task import apply_task_with_logprobs
-from pydantic import Field, validate_arguments, computed_field
+from pydantic import Field, validate_arguments, computed_field, BaseModel, field_serializer
 from typing import Any, Type, Literal, NamedTuple
 from functools import partial, cached_property
 from . import batch_runner as br
@@ -10,14 +10,25 @@ import numpy as np
 import math
 
 
+class Confidence(BaseModel):
+    top_token: str
+    next_token: str | None
+    difference: float = Field(allow_inf_nan=True)
+
+    @field_serializer('difference')
+    def serialize_dt(self, difference: float, _info):
+        return "Infinity" if math.isinf(difference) else difference
+
+
 class SentimentAnalysisResult(OpenAISchema):
     """Store the sentiment and reasoning for a survey comment"""
     reasoning: str = Field("The comment had no content", description="The reasoning for the sentiment assignment")
     sentiment: Literal["positive", "neutral", "negative"] | None = Field(None, description="The sentiment of the comment")
     logprobs: openai.types.chat.chat_completion.ChoiceLogprobs | None = Field(None, description="The log probabilities for the sentiment assignment")
-    sentiment_logprobs_: list[dict[str, Any]] | None = Field(None, description="The log probabilities for just the sentiment token")
+    # sentiment_logprobs_: list[dict[str, Any]] | None = Field(None, description="The log probabilities for just the sentiment token")
 
-    @property
+    @computed_field
+    @cached_property
     def sentiment_logprobs(self) -> list[dict[str, Any]] | None:
         """Returns the log probabilities and transformed (linear probs) 
         for just the sentiment token. 
@@ -27,7 +38,7 @@ class SentimentAnalysisResult(OpenAISchema):
         are all single tokens with the gpt-4 tokenizer.
         """
 
-        if self.logprobs and not self.sentiment_logprobs_:
+        if self.logprobs:
             def find_subsequence(seq, subseq):
                 sub_len = len(subseq)
                 for i in range(len(seq)):
@@ -44,13 +55,14 @@ class SentimentAnalysisResult(OpenAISchema):
             else:
                 raise ValueError("Could not find the sentiment in the logprobs")
 
-            self.sentiment_logprobs_ = [{'token': token['token'], 'logprob': token['logprob'], 'linear_prob': np.round(np.exp(token['logprob'])*100,2)}
+            return [{'token': token['token'], 'logprob': token['logprob'], 'linear_prob': np.round(np.exp(token['logprob'])*100,2)}
                     for token in following_token['top_logprobs']]
+        else:
+            return None
 
-        return self.sentiment_logprobs_   
-
-    @property
-    def classification_confidence(self) -> tuple[str, float]:
+    @computed_field
+    @cached_property
+    def classification_confidence(self) -> Confidence | None:
         """Calculate confidence based on top 2 distinct logprob diff within positive, negative, neutral rankings"""
 
         if not self.sentiment_logprobs:
@@ -67,13 +79,11 @@ class SentimentAnalysisResult(OpenAISchema):
                 next_logprob = val['logprob']
                 next_token = val['token']
                 break
+        difference = (top_logprob - next_logprob) if next_logprob else math.inf
 
-        class Confidence(NamedTuple):
-            top_token: str
-            next_token: str
-            difference: float
-
-        return Confidence(top_token, next_token, top_logprob - next_logprob if next_logprob is not None else math.inf)
+        return Confidence(top_token=top_token, 
+                          next_token=next_token, 
+                          difference=difference)
     
     @property
     def top_logprob(self) -> float:
@@ -84,7 +94,8 @@ class SentimentAnalysisResult(OpenAISchema):
 
         return self.sentiment_logprobs[0]['logprob']
 
-    @property
+    @computed_field
+    @cached_property
     def fine_grained_sentiment_category(self) -> str:
         """Return the sentiment category at a finer-grained level based on the logprobs.
         This basically keeps postive and negative but divides neutral into neutral-positive,

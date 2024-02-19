@@ -78,7 +78,7 @@ into a single excerpt."""
 
 # TODO: consider making this a class method
 @validate_arguments
-async def extract_excerpts(*, comments: list[str | None], question: str, goal_focus: str) -> list[OpenAISchema]:
+async def extract_excerpts(*, comments: list[str | float | None], question: str, goal_focus: str) -> list[OpenAISchema]:
     """Extract excerpts from a list of comments, based on a particular question and goal_focus
     
     Returns a list of ExcerptExtractionResult objects

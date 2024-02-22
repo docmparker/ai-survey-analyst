@@ -1,15 +1,14 @@
-/data/*
+/data/raw_example_data/
 /notebooks/
 /reports/
 /src/survey_analysis/comment_deidentification.py
 .env
 
-!/data/tags_8.yaml
+# !/data/tags_8.yaml
 # !/data/example_data/
 # /data/example_data/*
-!/data/example_data/coursera_survey_200rows.csv
-!/data/example_data/example_survey_data_synthetic.csv
-
+# !/data/example_data/coursera_survey_200rows.csv
+# !/data/example_data/example_survey_data_synthetic.csv
 # /data/raw_example_data/
 
 .DS_Store

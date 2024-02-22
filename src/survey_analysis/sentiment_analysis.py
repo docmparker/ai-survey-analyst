@@ -145,7 +145,7 @@ student course feedback comments.  You respond only with a JSON object.
 You will be provided with a comment from a student course feedback survey. \
 The comment will be delimited by {delimiter} characters. \
 Each original comment was in response to the question: "{self.question}". \
-Your task is to determine the sentiment of the comment and provide your reasoning for the sentiment. \
+Your task is to determine the sentiment of the comment and provide your reasoning for the sentiment.
 
 Step 1: Reason through what the sentiment of the comment is and why.
 - Include your reasoning in the "reasoning" field.

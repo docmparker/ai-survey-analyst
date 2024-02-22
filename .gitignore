@@ -5,8 +5,12 @@
 .env
 
 !/data/tags_8.yaml
+# !/data/example_data/
+# /data/example_data/*
 !/data/example_data/coursera_survey_200rows.csv
 !/data/example_data/example_survey_data_synthetic.csv
+
+# /data/raw_example_data/
 
 .DS_Store
 __pycache__/

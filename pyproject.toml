@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "survey_analysis"
+version = "0.1.0"
+dependencies = [
+    'python>=3.10.8',
+    'httpx>=0.24.1',
+    'pydantic>=2.5.2',
+    'python-dotenv>=1.0.0',
+    'PyYAML>=5.4.1',
+    'tiktoken>=0.3.0',
+    'numpy>=1.23.5',
+    'openai>=1.10.0',
+]
+
+[project.optional-dependencies]
+nb = [
+    'ipython>=8.12.3',
+    'matplotlib>=3.6.2',
+    'nest_asyncio>=1.5.6',
+    'pandas>=2.0.1',
+    'seaborn>=0.13.2',
+]

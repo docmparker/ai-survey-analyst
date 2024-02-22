@@ -1,8 +1,8 @@
 /data/raw_example_data/
-/notebooks/
 /archive/
 /reports/
 /src/survey_analysis/comment_deidentification.py
+/notebooks/0*.ipynb
 .env
 
 .DS_Store

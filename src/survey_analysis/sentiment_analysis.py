@@ -1,7 +1,7 @@
 from .utils import OpenAISchema
 from .models_common import InputModel, SurveyTaskProtocol, CommentModel, LLMConfig
 from .single_input_task import apply_task_with_logprobs
-from pydantic import Field, validate_arguments, computed_field, BaseModel, field_serializer
+from pydantic import Field, validate_call, computed_field, BaseModel, field_serializer
 from typing import Any, Type, Literal, NamedTuple
 from functools import partial, cached_property
 from . import batch_runner as br
@@ -171,7 +171,7 @@ Do your best. I will tip you $500 if you do an excellent job."""
         return SentimentAnalysisResult
     
 
-@validate_arguments
+@validate_call
 async def classify_sentiment(*, comments: list[str | float | None], question: str) -> list[OpenAISchema]:
     """Classify the sentiment for each of a list of comments, based on a particular question 
     

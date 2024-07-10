@@ -1,7 +1,7 @@
 from .utils import OpenAISchema
 from .models_common import InputModel, SurveyTaskProtocol, CommentModel, CommentBatch
 from .single_input_task import apply_task
-from pydantic import Field, validate_arguments
+from pydantic import Field, validate_call
 from typing import Type
 from functools import partial
 
@@ -56,7 +56,7 @@ Do your best. I will tip you $500 if you do an excellent job."""
         return SummarizationResult
     
 
-@validate_arguments
+@validate_call
 async def summarize_comments(*, comments: list[str | float | None], question: str) -> OpenAISchema:
     """Summarize the themes of a group of comments, based on a particular question
     

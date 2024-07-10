@@ -1,5 +1,5 @@
 from .utils import OpenAISchema
-from .models_common import InputModel, SurveyTaskProtocol, CommentModel, CommentBatch
+from .models_common import InputModel, LLMConfig, SurveyTaskProtocol, CommentModel, CommentBatch
 from .single_input_task import apply_task
 from pydantic import Field, validate_call
 from typing import Type
@@ -57,17 +57,24 @@ Do your best. I will tip you $500 if you do an excellent job."""
     
 
 @validate_call
-async def summarize_comments(*, comments: list[str | float | None], question: str) -> OpenAISchema:
+async def summarize_comments(*, comments: list[str | float | None], 
+                             question: str,
+                             llm_config: LLMConfig | None = None) -> OpenAISchema:
     """Summarize the themes of a group of comments, based on a particular question
     
     Returns a SummarizationResult object
     """
+
+    if not llm_config:
+        llm_config = LLMConfig()
+
     comment_list = [CommentModel(comment=comment) for comment in comments]
     comments_to_test: CommentBatch = CommentBatch(comments=comment_list)
     survey_task: SurveyTaskProtocol = Summarization(question=question)
     summarization_task = partial(apply_task, 
                       get_prompt=survey_task.prompt_messages, 
-                      result_class=survey_task.result_class)
+                      result_class=survey_task.result_class,
+                      llm_config=llm_config)
     summarization_result = await summarization_task(comments_to_test)
 
     return summarization_result

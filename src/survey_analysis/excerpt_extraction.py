@@ -1,7 +1,7 @@
 from .utils import OpenAISchema
 from .models_common import InputModel, SurveyTaskProtocol, CommentModel
 from .single_input_task import apply_task
-from pydantic import Field, validate_arguments
+from pydantic import Field, validate_call
 from typing import Type
 from functools import partial
 from . import batch_runner as br
@@ -65,7 +65,7 @@ into a single excerpt."""
         return ExcerptExtractionResult
     
 
-# @validate_arguments
+# @validate_call
 # async def extract_excerpts(*, comment: str, question: str, goal_focus: str) -> OpenAISchema:
 #     """Extract excerpts containing a particular goal focus from a student comment"""
 #     survey_task = ExcerptExtraction(goal_focus, question)
@@ -77,7 +77,7 @@ into a single excerpt."""
 
 
 # TODO: consider making this a class method
-@validate_arguments
+@validate_call
 async def extract_excerpts(*, comments: list[str | float | None], question: str, goal_focus: str) -> list[OpenAISchema]:
     """Extract excerpts from a list of comments, based on a particular question and goal_focus
     

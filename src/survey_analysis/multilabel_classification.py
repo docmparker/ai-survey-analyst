@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import Field, ConfigDict, validate_arguments
+from pydantic import Field, ConfigDict, validate_call
 from pydantic.main import create_model
 from functools import partial
 from .utils import OpenAISchema
@@ -118,7 +118,7 @@ in the JSON output. Do your best. I will tip you $500 if you do an excellent job
         return self._result_class
 
 
-@validate_arguments
+@validate_call
 async def multilabel_classify(*, comments: list[str | float | None], tags_list: list[dict[str, str]] | None = None) -> OpenAISchema:
     """Multilabel classify a list of comments, based on a list of categories (tags)
     

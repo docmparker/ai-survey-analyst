@@ -1,7 +1,7 @@
 from collections import Counter
 from .utils import OpenAISchema
 from .models_common import SurveyTaskProtocol, InputModel, CommentModel, CommentBatch
-from pydantic import Field, validate_arguments, conint
+from pydantic import Field, validate_call, conint
 from typing import Type
 from survey_analysis import single_input_task as sit
 from functools import partial
@@ -100,7 +100,7 @@ as many as you can."""
         return DerivedThemes
 
 
-@validate_arguments
+@validate_call
 async def combine_themes_(themes: list[Theme], question: str) -> combine_themes:
     """Convenience method for combining themes derived from a batch of comments
     
@@ -118,7 +118,7 @@ async def combine_themes_(themes: list[Theme], question: str) -> combine_themes:
     return combined_result
 
 
-@validate_arguments
+@validate_call
 async def derive_themes(comments: list[str | float | None], question: str, shuffle_passes: conint(ge=1, le=10) = 3) -> combine_themes:
     """Derives themes from a batch of comments, coordinating
     multiple shuffled passes to avoid LLM positional bias and

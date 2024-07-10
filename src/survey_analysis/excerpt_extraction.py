@@ -1,5 +1,5 @@
 from .utils import OpenAISchema
-from .models_common import InputModel, SurveyTaskProtocol, CommentModel
+from .models_common import InputModel, LLMConfig, SurveyTaskProtocol, CommentModel
 from .single_input_task import apply_task
 from pydantic import Field, validate_call
 from typing import Type
@@ -78,15 +78,24 @@ into a single excerpt."""
 
 # TODO: consider making this a class method
 @validate_call
-async def extract_excerpts(*, comments: list[str | float | None], question: str, goal_focus: str) -> list[OpenAISchema]:
+async def extract_excerpts(*, comments: list[str | float | None], 
+                           question: str, 
+                           goal_focus: str,
+                           llm_config: LLMConfig | None = None) -> list[OpenAISchema]:
     """Extract excerpts from a list of comments, based on a particular question and goal_focus
     
     Returns a list of ExcerptExtractionResult objects
     """
 
+    if not llm_config:
+        llm_config = LLMConfig()
+
     comments_to_test: list[CommentModel] = [CommentModel(comment=comment) for comment in comments]
     survey_task: SurveyTaskProtocol = ExcerptExtraction(goal_focus=goal_focus, question=question)
-    ex_task = partial(apply_task, get_prompt=survey_task.prompt_messages, result_class=survey_task.result_class)
+    ex_task = partial(apply_task, 
+                      get_prompt=survey_task.prompt_messages, 
+                      result_class=survey_task.result_class,
+                      llm_config=llm_config)
     extractions = await br.process_tasks(comments_to_test, ex_task)
 
     return extractions

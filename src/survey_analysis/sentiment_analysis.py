@@ -172,18 +172,23 @@ Do your best. I will tip you $500 if you do an excellent job."""
     
 
 @validate_call
-async def classify_sentiment(*, comments: list[str | float | None], question: str) -> list[OpenAISchema]:
+async def classify_sentiment(*, comments: list[str | float | None], 
+                             question: str,
+                             llm_config: LLMConfig | None = None) -> list[OpenAISchema]:
     """Classify the sentiment for each of a list of comments, based on a particular question 
     
     Returns a list of SentimentAnalysisResult objects
     """
+
+    if not llm_config:
+        llm_config = LLMConfig(logprobs=True, top_logprobs=3)
 
     comments_to_test: list[CommentModel] = [CommentModel(comment=comment) for comment in comments]
     survey_task: SurveyTaskProtocol = SentimentAnalysis(question=question)
     sentiment_task = partial(apply_task_with_logprobs, 
                       get_prompt=survey_task.prompt_messages, 
                       result_class=survey_task.result_class,
-                      llm_config=LLMConfig(logprobs=True, top_logprobs=3))
+                      llm_config=llm_config)
     sentiment_results = await br.process_tasks(comments_to_test, sentiment_task)
 
     return sentiment_results

@@ -122,7 +122,7 @@ in the JSON output. Do your best. I will tip you $500 if you do an excellent job
 async def multilabel_classify(*, comments: list[str | float | None], tags_list: list[dict[str, str]] | None = None) -> OpenAISchema:
     """Multilabel classify a list of comments, based on a list of categories (tags)
     
-    Returns a list of ExcerptExtractionResult objects
+    Returns a list of MultilabelClassificationResult objects
     """
 
     if not tags_list:

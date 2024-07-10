@@ -4,7 +4,7 @@ from pydantic.main import create_model
 from functools import partial
 from .utils import OpenAISchema
 import yaml
-from .models_common import SurveyTaskProtocol, InputModel, CommentModel
+from .models_common import LLMConfig, SurveyTaskProtocol, InputModel, CommentModel
 from .single_input_task import apply_task
 from . import batch_runner as br
 from typing import Type
@@ -119,7 +119,9 @@ in the JSON output. Do your best. I will tip you $500 if you do an excellent job
 
 
 @validate_call
-async def multilabel_classify(*, comments: list[str | float | None], tags_list: list[dict[str, str]] | None = None) -> OpenAISchema:
+async def multilabel_classify(*, comments: list[str | float | None], 
+                              tags_list: list[dict[str, str]] | None = None,
+                              llm_config: LLMConfig | None = None) -> OpenAISchema:
     """Multilabel classify a list of comments, based on a list of categories (tags)
     
     Returns a list of MultilabelClassificationResult objects
@@ -128,9 +130,15 @@ async def multilabel_classify(*, comments: list[str | float | None], tags_list: 
     if not tags_list:
         tags_list = default_tags_list
 
+    if not llm_config:
+        llm_config = LLMConfig()
+
     survey_task: SurveyTaskProtocol = MultiLabelClassification(tags_list=tags_list)
     comments_to_test: list[CommentModel] = [CommentModel(comment=comment) for comment in comments]
-    mlc_task = partial(apply_task, get_prompt=survey_task.prompt_messages, result_class=survey_task.result_class)
+    mlc_task = partial(apply_task, 
+                       get_prompt=survey_task.prompt_messages, 
+                       result_class=survey_task.result_class,
+                       llm_config=llm_config)
     classifications = await br.process_tasks(comments_to_test, mlc_task)
 
     return classifications
